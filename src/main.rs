@@ -1,18 +1,23 @@
 use std::io::prelude::*;
-use std::net::{TcpListener, TcpStream};
+use std::net::{TcpListener, TcpStream, SocketAddr};
 use std::fs;
+use std::thread;
+use std::sync::{Arc, Mutex};
+use db_interaction_server::GroupeTaches;
 
 fn main() {
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
+    let groupe = GroupeTaches::new(4);
 
     for flux in ecouteur.incoming() {
-        let flux = flux.unwrap();
-
-        gestion_conneexion(flux);
+        groupe.executer(|| {
+            gestion_connexion(&flux.unwrap());
+        });
     }
 }
 
-fn gestion_conneexion(mut flux: TcpStream) {
+fn gestion_connexion(flux: &TcpStream) {
+
     let mut tampon = [0; 1024];
 
     flux.read(&mut tampon).unwrap();
@@ -34,6 +39,10 @@ fn gestion_conneexion(mut flux: TcpStream) {
         contenu
     );
     flux.write(reponse.as_bytes()).unwrap();
-    flux.flush().unwrap();
-    
+    flux.flush().unwrap();   
+}
+
+struct client {
+    addresse: SocketAddr,
+    requetes_en_cours: i32,
 }
