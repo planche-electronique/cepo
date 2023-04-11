@@ -1,20 +1,20 @@
 use std::io::prelude::*;
-use std::net::{TcpListener, TcpStream, SocketAddr};
+use std::net::{TcpListener, TcpStream};
 use std::fs;
 use std::thread;
-use std::sync::{Arc, Mutex, mpsc};
-use std::time::Duration;
+use std::sync::{mpsc};
 
 
 fn main() {
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
-    let (tx, rx) = mpsc::channel();
+    let (tx_main, rx_co) = mpsc::channel();
+    let (tx_co, rx_main) = mpsc::channel();
 
     thread::spawn(move || {
         let mut requetes_en_cours: Vec<Client> = Vec::new();
-        while true {
-            let message: String = rx.recv().unwrap();
+        loop {
+            let message: String = rx_co.recv().unwrap();
             let signe = &message[0..1];
             let adresse = &message[1..message.len()];
             match signe {
@@ -23,14 +23,21 @@ fn main() {
                     let mut est_active: bool = false;
                     for mut client in requetes_en_cours.clone() {
                         if client.adresse == adresse {
-                            client.requetes_en_cours += 1;
-                            est_active = true;
+                            if client.requetes_en_cours < 10 {
+                                client.requetes_en_cours += 1;
+                                est_active = true;
+                                tx_co.send("Ok".to_string()).unwrap();
+                            } else {
+                                println!("pas plus de requêtes pour {}", adresse);
+                                tx_co.send("No".to_string()).unwrap();
+                            }
                         }
                         if est_active == false {
                             requetes_en_cours.push(Client {
                                 adresse: adresse.to_string(),
                                 requetes_en_cours: 1,
-                            })
+                            });
+                            tx_co.send("Ok".to_string()).unwrap();
                         }
                     }
                 },
@@ -47,6 +54,7 @@ fn main() {
                             
                         }
                     }
+                    tx_co.send("Ok".to_string()).unwrap();
                 },
                 _ => eprintln!("not a valid message"),
             }
@@ -58,16 +66,23 @@ fn main() {
         let flux = flux.unwrap();
 
         let adresse = format!("{}", (flux.peer_addr().unwrap()));
-        let tx = tx.clone();
-
-        thread::spawn(move || {
-            let adresse = adresse.clone();
-            tx.send(format!("+{}", adresse).to_owned()).unwrap();
-            gestion_connexion(flux);
-            tx.send(format!("-{}", adresse).to_owned()).unwrap_or_else(|err| {
-                eprintln!("erreur à l'envoi du message de ")
-            });
-        });
+        let tx_main = tx_main.clone();
+        let adresse = adresse.clone();
+        tx_main.send(format!("+{}", adresse).to_owned()).unwrap();
+        match rx_main.recv().unwrap() {
+            string => {
+                if string.as_str() == "Ok"{
+                    thread::spawn(move || {
+                        gestion_connexion(flux);
+                        tx_main.send(format!("-{}", adresse).to_owned()).unwrap_or_else(|err| {
+                            eprintln!("erreur à l'envoi du message de {} : {}"
+                                , adresse, err);
+                        });
+                    });
+                };
+            }
+        }
+        
     }
 }
 
@@ -95,14 +110,6 @@ fn gestion_connexion(mut flux: TcpStream) {
     );
     flux.write(reponse.as_bytes()).unwrap();
     flux.flush().unwrap();   
-}
-
-fn retourner_message_erreur(mut flux: TcpStream) {
-    let reponse = format!(
-        "HTTP/1.1 408 REQUEST TIME-OUT\r\n"
-    );
-    flux.write(reponse.as_bytes()).unwrap();
-    flux.flush().unwrap();
 }
 
 #[derive(Clone, PartialEq)]
