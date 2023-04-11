@@ -13,43 +13,46 @@ fn main() {
 
     thread::spawn(move || {
         let mut requetes_en_cours: Vec<Client> = Vec::new();
-        let message: String = rx.recv().unwrap();
-        let signe = &message[0..1];
-        let adresse = &message[1..message.len()];
-        match signe {
-            "+" => {
-                println!("une connection de gagnee pour {}", adresse);
-                let mut est_active: bool = false;
-                for mut client in requetes_en_cours.clone() {
-                    if client.adresse == adresse {
-                        client.requetes_en_cours += 1;
-                        est_active = true;
-                    }
-                    if est_active == false {
-                        requetes_en_cours.push(Client {
-                            adresse: adresse.to_string(),
-                            requetes_en_cours: 1,
-                        })
-                    }
-                }
-            },
-            "-" => {
-                println!("une connection de perdue pour {}", adresse);
-                for mut client in requetes_en_cours.clone() {
-                    if client.adresse == adresse {
-                        if client.requetes_en_cours != 1{
-                            client.requetes_en_cours -=1;
-                        } else {
-                            let index = requetes_en_cours.iter().position(|x| *x == client).unwrap();
-                            requetes_en_cours.remove(index);
+        while true {
+            let message: String = rx.recv().unwrap();
+            let signe = &message[0..1];
+            let adresse = &message[1..message.len()];
+            match signe {
+                "+" => {
+                    println!("une connection de gagnee pour {}", adresse);
+                    let mut est_active: bool = false;
+                    for mut client in requetes_en_cours.clone() {
+                        if client.adresse == adresse {
+                            client.requetes_en_cours += 1;
+                            est_active = true;
                         }
-                        
+                        if est_active == false {
+                            requetes_en_cours.push(Client {
+                                adresse: adresse.to_string(),
+                                requetes_en_cours: 1,
+                            })
+                        }
                     }
-                }
-            },
-            _ => eprintln!("not a valid message"),
+                },
+                "-" => {
+                    println!("une connection de perdue pour {}", adresse);
+                    for mut client in requetes_en_cours.clone() {
+                        if client.adresse == adresse {
+                            if client.requetes_en_cours != 1{
+                                client.requetes_en_cours -=1;
+                            } else {
+                                let index = requetes_en_cours.iter().position(|x| *x == client).unwrap();
+                                requetes_en_cours.remove(index);
+                            }
+                            
+                        }
+                    }
+                },
+                _ => eprintln!("not a valid message"),
+            }
         }
     });
+        
 
     for flux in ecouteur.incoming() {
         let flux = flux.unwrap();
@@ -61,7 +64,9 @@ fn main() {
             let adresse = adresse.clone();
             tx.send(format!("+{}", adresse).to_owned()).unwrap();
             gestion_connexion(flux);
-            tx.send(format!("-{}", adresse).to_owned()).unwrap();
+            tx.send(format!("-{}", adresse).to_owned()).unwrap_or_else(|err| {
+                eprintln!("erreur à l'envoi du message de ")
+            });
         });
     }
 }
