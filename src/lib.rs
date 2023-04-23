@@ -17,6 +17,7 @@ struct Vol {
     minute_atterissage: u8,
 }
 
+#[derive(Clone)]
 struct Appareil {
     modele: String,
     categorie: u8,
@@ -63,9 +64,10 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
     //on ne garde que les appareils de la liste d'immatriculations
     let mut appareils_cibles: Vec<Appareil> = Vec::new();
     for immatriculation in liste_immatriculations() {
-        for appareil in appareils_ogn {
+        for appareil in &appareils_ogn {
             if immatriculation == appareil.immatriculation {
-                appareils_cibles.push(appareil);
+                appareils_cibles.push((*appareil).clone());
+                println!("{}", immatriculation);
             }
         }
     }
@@ -96,11 +98,11 @@ fn liste_immatriculations() -> Vec<String> {
     let mut immatriculations = Vec::new();
     for immatriculation_json in immatriculations_json {
         match immatriculation_json {
-            json::JsonValue::String(immatriculation) => {
-                immatriculations.push(immatriculation);
+            json::JsonValue::Short(immatriculation) => {
+                immatriculations.push(immatriculation.as_str().to_string());
             },
             _ => {
-                eprintln!("{} n'est pas de type string", immatriculation_json);
+                eprintln!("{} n'est pas de type short", immatriculation_json);
             }
         }
     }
