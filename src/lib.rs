@@ -10,6 +10,18 @@ struct Vol {
     atterissage: NaiveTime,
 }
 
+impl Vol {
+    fn to_json(self: &Self) -> String {
+        let vol = json::object!{
+            numero: self.numero,
+            planeur: *self.planeur,
+            decollage: *self.decollage.format("%Hh%M").to_string(),
+            atterissage: *self.atterissage.format("%Hh%M").to_string(),
+        };
+        vol.dump()
+    }
+}
+
 struct Appareil {
     modele: String,
     categorie: u8,
@@ -90,6 +102,8 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
     }
 }
 
+
+
 fn enregistrer_vols() {
     let mut chemins = fs::read_dir("./").unwrap();
     let maintenant = Utc::now();
@@ -133,6 +147,8 @@ fn enregistrer_vols() {
     //on itere sur ce vecteur, puis on verifie l'egalite le dossier du jour voulu, 
 
 }
+
+
 
 fn liste_immatriculations() -> Vec<String> {
     let contenu_fichier = fs::read_to_string("immatriculations.json")
