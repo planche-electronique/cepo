@@ -34,7 +34,7 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
     println!("{}", requete);
     let requete_parse = json::parse(requete.as_str()).unwrap();
     let devices = requete_parse["devices"].clone();
-    let mut appareils: Vec<Appareil> = Vec::new();
+    let mut appareils_ogn: Vec<Appareil> = Vec::new();
     let tableau_devices = match devices {
         Array(appareils_json) => appareils_json,
         _ => {
@@ -58,15 +58,18 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
             categorie: categorie,
             immatriculation: immatriculation,
         };
-        appareils.push(appareil_actuel);
+        appareils_ogn.push(appareil_actuel);
+    }
+    //on ne garde que les appareils de la liste d'immatriculations
+    let mut appareils_cibles: Vec<Appareil> = Vec::new();
+    for immatriculation in liste_immatriculations() {
+        for appareil in appareils_ogn {
+            if immatriculation == appareil.immatriculation {
+                appareils_cibles.push(appareil);
+            }
+        }
     }
 
-
-    /* on recupere le tableau de "devices" et les infos utiles sont: 
-        modele "aircraft",
-        type "aircraft_type",
-        immat "registration",
-    */
     //on crée un vecteur de struct Vol
     /* on itere sur le tableau de vols (nommé "flights") retourné par l'api
     infos utiles:
