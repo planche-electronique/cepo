@@ -4,7 +4,7 @@ use std::fs;
 use std::thread;
 use std::sync::{mpsc};
 use chrono::prelude::*;
-use db_interaction_server::{requete_ogn, traitement_requete_ogn};
+use serveur::{requete_ogn, traitement_requete_ogn};
 
 
 fn main() {

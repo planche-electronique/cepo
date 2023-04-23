@@ -139,15 +139,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "db_interaction_server"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "json",
- "reqwest",
-]
-
-[[package]]
 name = "encoding_rs"
 version = "0.8.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -796,6 +787,15 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "serveur"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "json",
+ "reqwest",
 ]
 
 [[package]]
