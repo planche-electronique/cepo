@@ -1,5 +1,5 @@
 use std::fs;
-use json::JsonValue::Array;
+use json::JsonValue::{Short, Null, Number, Boolean, Object, Array};
 use chrono::prelude::*;
 
 
@@ -17,6 +17,12 @@ struct Vol {
     minute_atterissage: u8,
 }
 
+struct Appareil {
+    modele: String,
+    categorie: u8,
+    immatriculation: String,
+}
+
 pub fn requete_ogn(date: NaiveDate) -> String {
     let airfield_code = "LFLE";
     let reponse = reqwest::blocking::get(format!("http://flightbook.glidernet.org/api/logbook/{}/{}", airfield_code, date.format("%Y-%m-%d").to_string())).unwrap();
@@ -26,9 +32,35 @@ pub fn requete_ogn(date: NaiveDate) -> String {
 
 pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
     println!("{}", requete);
-    /*let requete_parse = json::parse(requete.as_str()).unwrap();
-    let devices = requete_parse["devices"];*/
-    
+    let requete_parse = json::parse(requete.as_str()).unwrap();
+    let devices = requete_parse["devices"].clone();
+    let mut appareils: Vec<Appareil> = Vec::new();
+    let tableau_devices = match devices {
+        Array(appareils_json) => appareils_json,
+        _ => {
+            eprintln!("devices n'est pas un tableau");
+            Vec::new()
+        },
+    };
+    for appareil in tableau_devices {
+        let modele_json = appareil["aircraft"].clone();
+        let modele = modele_json.as_str().unwrap().to_string();
+        
+        let categorie_json = appareil["aircraft_type"].clone();
+        let categorie = categorie_json.as_u8().unwrap();
+        
+        let immatriculation_json = appareil["registration"].clone();
+        let immatriculation = immatriculation_json.as_str().unwrap().to_string();
+        
+
+        let appareil_actuel = Appareil {
+            modele: modele,
+            categorie: categorie,
+            immatriculation: immatriculation,
+        };
+        appareils.push(appareil_actuel);
+    }
+
 
     /* on recupere le tableau de "devices" et les infos utiles sont: 
         modele "aircraft",
