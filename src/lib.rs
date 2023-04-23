@@ -4,16 +4,24 @@ use chrono::prelude::*;
 
 
 struct Vol {
-    numero: i32,
+    numero_ogn: i32,
     planeur: String,
     decollage: NaiveTime,
     atterissage: NaiveTime,
 }
 
 impl Vol {
+    fn default() -> Self {
+        Vol {
+            numero_ogn: 0,
+            planeur: "X-XXXX".to_string(),
+            decollage: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+            atterissage: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+        }
+    }
     fn to_json(self: &Self) -> String {
         let vol = json::object!{
-            numero: self.numero,
+            numero_ogn: self.numero_ogn,
             planeur: *self.planeur,
             decollage: *self.decollage.format("%Hh%M").to_string(),
             atterissage: *self.atterissage.format("%Hh%M").to_string(),
@@ -93,7 +101,7 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
         let immatriculation = appareils_ogn[device_number].immatriculation.clone();
         
         vols.push( Vol {
-            numero: index,
+            numero_ogn: index,
             planeur: immatriculation,
             decollage: decollage,
             atterissage: atterissage,
