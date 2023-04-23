@@ -1,5 +1,6 @@
 use std::fs;
 use json::JsonValue::Array;
+use chrono::prelude::*;
 
 struct Vol {
     numero: i32,
@@ -24,6 +25,8 @@ async fn requete_ogn() -> String {
     let corps = reponse.text().await.unwrap();
     corps
 }
+
+fn traitement_requete_ogn(date: )
 
 fn liste_immatriculations() -> Vec<String> {
     let contenu_fichier = fs::read_to_string("immatriculations.json")
