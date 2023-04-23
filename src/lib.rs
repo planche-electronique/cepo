@@ -1,7 +1,7 @@
 use std::fs;
 use json::JsonValue::Array;
 use chrono::prelude::*;
-use chrono::format::strftime::StrftimeItems;
+
 
 struct Vol {
     numero: i32,
@@ -17,14 +17,33 @@ struct Vol {
     minute_atterissage: u8,
 }
 
-async fn requete_ogn(date: NaiveDate) -> String {
+pub fn requete_ogn(date: NaiveDate) -> String {
     let airfield_code = "LFLE";
-    let reponse = reqwest::get(format!("http://flightbook.glidernet.org/api/logbook/{}/{}", airfield_code, date.format("%Y-%m-%d").to_sring())).await.unwrap();
-    let corps = reponse.text().await.unwrap();
+    let reponse = reqwest::blocking::get(format!("http://flightbook.glidernet.org/api/logbook/{}/{}", airfield_code, date.format("%Y-%m-%d").to_string())).unwrap();
+    let corps = reponse.text().unwrap();
     corps
 }
 
-fn traitement_requete_ogn(date: NaiveDate)
+pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
+    println!("{}", requete);
+    /*let requete_parse = json::parse(requete.as_str()).unwrap();
+    let devices = requete_parse["devices"];
+    */
+
+    /* on recupere le tableau de "devices" et les infos utiles sont: 
+        modele "aircraft",
+        type "aircraft_type",
+        immat "registration",
+    */
+    //on crée un vecteur de struct Vol
+    /* on itere sur le tableau de vols (nommé "flights") retourné par l'api
+    infos utiles:
+    "start"
+    "stop"
+    "device"
+    "towing" auquel ca "tow" aussi
+    */
+}
 
 fn liste_immatriculations() -> Vec<String> {
     let contenu_fichier = fs::read_to_string("immatriculations.json")

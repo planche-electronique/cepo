@@ -3,6 +3,8 @@ use std::net::{TcpListener, TcpStream};
 use std::fs;
 use std::thread;
 use std::sync::{mpsc};
+use chrono::prelude::*;
+use db_interaction_server::{requete_ogn, traitement_requete_ogn};
 
 
 fn main() {
@@ -10,6 +12,9 @@ fn main() {
 
     let (tx_main, rx_co) = mpsc::channel();
     let (tx_co, rx_main) = mpsc::channel();
+    let now = Utc::now();
+    let date = now.date_naive();
+    traitement_requete_ogn(date, requete_ogn(date));
 
     thread::spawn(move || {
         let mut requetes_en_cours: Vec<Client> = Vec::new();
@@ -117,3 +122,4 @@ struct Client {
     adresse: String,
     requetes_en_cours: i32,
 }
+
