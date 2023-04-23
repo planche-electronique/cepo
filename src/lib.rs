@@ -19,6 +19,7 @@ impl Vol {
             atterissage: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
         }
     }
+
     fn to_json(self: &Self) -> String {
         let vol = json::object!{
             numero_ogn: self.numero_ogn,
@@ -44,7 +45,7 @@ pub fn requete_ogn(date: NaiveDate) -> String {
 }
 
 pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
-    println!("{}", requete);
+
     let requete_parse = json::parse(requete.as_str()).unwrap();
     let devices = requete_parse["devices"].clone();
     let mut appareils_ogn: Vec<Appareil> = Vec::new();
@@ -93,8 +94,15 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
         let decollage = NaiveTime::parse_from_str(format!("{}",start_str).as_str(), "%Hh%M").unwrap();
         
         let mut stop_json = vol_json["stop"].clone();
-        let stop_str = stop_json.take_string().unwrap();
-        let atterissage = NaiveTime::parse_from_str(format!("{}",stop_str).as_str(), "%Hh%M").unwrap();
+        let stop_str = match stop_json {
+            json::JsonValue::String(string) =>{
+                string
+            },
+            _ => {
+                "00h00".to_string()
+            },
+        };
+        let atterissage = NaiveTime::parse_from_str(stop_str.as_str(), "%Hh%M").unwrap();
 
         let device = vol_json["device"].clone();
         let device_number = device.as_u8().unwrap() as usize;
@@ -108,6 +116,8 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
         });
         index += 1;
     }
+
+    enregistrer_vols(vols);
 }
 
 
@@ -118,7 +128,8 @@ fn enregistrer_vols(vols: Vec<Vol>) {
     let annee = maintenant.date_naive().format("%Y").to_string();
     let mut annee_existe = false;
     for chemin in chemins {
-        if chemin.unwrap().path().to_str().unwrap().to_string() == annee {
+        let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
+        if chemin_dossier == format!("./{}", annee) {
             annee_existe = true;
         }
     }
@@ -126,35 +137,50 @@ fn enregistrer_vols(vols: Vec<Vol>) {
         fs::create_dir(format!("./{}", annee)).unwrap();
     }
 
-    chemins = fs::read_dir("./").unwrap();
+    chemins = fs::read_dir(format!("./{}", annee)).unwrap();
     let mois = maintenant.date_naive().format("%m").to_string();
     let mut mois_existe = false;
     for chemin in chemins {
-        if chemin.unwrap().path().to_str().unwrap().to_string() == annee {
+        let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
+        if chemin_dossier == format!("./{}\\{}", annee, mois) {
             mois_existe = true;
         }
     }
     if mois_existe == false {
-        fs::create_dir(format!("./{}", mois)).unwrap();
+        fs::create_dir(format!("./{}\\{}", annee, mois)).unwrap();
     }
 
-    chemins = fs::read_dir("./").unwrap();
+    chemins = fs::read_dir(format!("./{}\\{}", annee, mois)).unwrap();
     let jour = maintenant.date_naive().format("%d").to_string();
     let mut jour_existe = false;
     for chemin in chemins {
-        if chemin.unwrap().path().to_str().unwrap().to_string() == annee {
+        let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
+        if chemin_dossier == format!("./{}\\{}\\{}", annee, mois, jour) {
             jour_existe = true;
         }
     }
     if jour_existe == false {
-        fs::create_dir(format!("./{}", jour)).unwrap();
+        fs::create_dir(format!("./{}/{}/{}", annee, mois, jour)).unwrap();
     }
     let mut vols_json = Vec::new();
     for vol in vols {
         vols_json.push(vol.to_json());
     }
 
-    //on itere sur ce vecteur, puis on verifie l'egalite le dossier du jour voulu, 
+    let mut index = 1;
+    for vol_json in vols_json {
+        let chemin = format!("./{}/{}/{}/{}.json", annee, mois, jour, index);
+        let fichier = fs::read_to_string(chemin.clone()).unwrap_or_else(|err| {
+            println!("fichier numero {} introuvable ou non ouvrable", index);
+            "".to_string()
+        });
+                                
+        if fichier != vol_json {
+            fs::write(chemin, vol_json)
+                .expect("impossible d'ecrire le fichier");
+        }
+        index +=1;
+    } 
 
 }
 
