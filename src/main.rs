@@ -6,6 +6,7 @@ use std::sync::{mpsc};
 use chrono::prelude::*;
 mod ogn;
 use ogn::{requete_ogn, traitement_requete_ogn};
+use serveur::thread_gestion;
 
 
 fn main() {
@@ -13,57 +14,14 @@ fn main() {
 
     let (tx_main, rx_co) = mpsc::channel();
     let (tx_co, rx_main) = mpsc::channel();
+
+
+    //ca dans un thread
     let date = NaiveDate::from_ymd_opt(2023, 04, 20).unwrap();
     traitement_requete_ogn(date, requete_ogn(date));
 
     thread::spawn(move || {
-        let mut requetes_en_cours: Vec<Client> = Vec::new();
-        loop {
-            let message: String = rx_co.recv().unwrap();
-            let signe = &message[0..1];
-            let adresse = &message[1..message.len()];
-            match signe {
-                "+" => {
-                    println!("une connection de gagnee pour {}", adresse);
-                    let mut est_active: bool = false;
-                    for mut client in requetes_en_cours.clone() {
-                        if client.adresse == adresse {
-                            if client.requetes_en_cours < 10 {
-                                client.requetes_en_cours += 1;
-                                est_active = true;
-                                tx_co.send("Ok".to_string()).unwrap();
-                            } else {
-                                println!("pas plus de requêtes pour {}", adresse);
-                                tx_co.send("No".to_string()).unwrap();
-                            }
-                        }
-                        if est_active == false {
-                            requetes_en_cours.push(Client {
-                                adresse: adresse.to_string(),
-                                requetes_en_cours: 1,
-                            });
-                            tx_co.send("Ok".to_string()).unwrap();
-                        }
-                    }
-                },
-                "-" => {
-                    println!("une connection de perdue pour {}", adresse);
-                    for mut client in requetes_en_cours.clone() {
-                        if client.adresse == adresse {
-                            if client.requetes_en_cours != 1{
-                                client.requetes_en_cours -=1;
-                            } else {
-                                let index = requetes_en_cours.iter().position(|x| *x == client).unwrap();
-                                requetes_en_cours.remove(index);
-                            }
-                            
-                        }
-                    }
-                    tx_co.send("Ok".to_string()).unwrap();
-                },
-                _ => eprintln!("not a valid message"),
-            }
-        }
+        thread_gestion(tx_co, rx_co);
     });
         
 
@@ -115,12 +73,6 @@ fn gestion_connexion(mut flux: TcpStream) {
     );
     flux.write(reponse.as_bytes()).unwrap();
     flux.flush().unwrap();   
-}
-
-#[derive(Clone, PartialEq)]
-struct Client {
-    adresse: String,
-    requetes_en_cours: i32,
 }
 
 mod tests;

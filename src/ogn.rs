@@ -78,7 +78,7 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
         
         vols.push( Vol {
             numero_ogn: index,
-            planeur: immatriculation,
+            aeronef: immatriculation,
             decollage: decollage,
             atterissage: atterissage,
         });
