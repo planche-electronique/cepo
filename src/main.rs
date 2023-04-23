@@ -4,7 +4,8 @@ use std::fs;
 use std::thread;
 use std::sync::{mpsc};
 use chrono::prelude::*;
-use serveur::{requete_ogn, traitement_requete_ogn};
+mod ogn;
+use ogn::{requete_ogn, traitement_requete_ogn};
 
 
 fn main() {
@@ -12,8 +13,7 @@ fn main() {
 
     let (tx_main, rx_co) = mpsc::channel();
     let (tx_co, rx_main) = mpsc::channel();
-    let now = Utc::now();
-    let date = now.date_naive();
+    let date = NaiveDate::from_ymd_opt(2023, 04, 20).unwrap();
     traitement_requete_ogn(date, requete_ogn(date));
 
     thread::spawn(move || {
