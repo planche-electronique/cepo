@@ -65,7 +65,7 @@ fn liste_immatriculations() -> Vec<String> {
     immatriculations
 }
 
-fn thread_gestion(tx_co: Sender<String>, rx_co: Receiver<String>) {
+pub fn thread_gestion(tx_co: Sender<String>, rx_co: Receiver<String>) {
     let mut requetes_en_cours: Vec<Client> = Vec::new();
     loop {
         let message: String = rx_co.recv().unwrap();
