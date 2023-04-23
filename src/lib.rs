@@ -104,7 +104,7 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
 
 
 
-fn enregistrer_vols() {
+fn enregistrer_vols(vols: Vec<Vol>) {
     let mut chemins = fs::read_dir("./").unwrap();
     let maintenant = Utc::now();
     let annee = maintenant.date_naive().format("%Y").to_string();
@@ -141,8 +141,10 @@ fn enregistrer_vols() {
     if jour_existe == false {
         fs::create_dir(format!("./{}", jour)).unwrap();
     }
-
-    //on cree une liste de string json des vols
+    let mut vols_json = Vec::new();
+    for vol in vols {
+        vols_json.push(vol.to_json());
+    }
 
     //on itere sur ce vecteur, puis on verifie l'egalite le dossier du jour voulu, 
 
