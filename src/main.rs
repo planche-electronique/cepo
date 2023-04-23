@@ -123,3 +123,4 @@ struct Client {
     requetes_en_cours: i32,
 }
 
+mod tests;

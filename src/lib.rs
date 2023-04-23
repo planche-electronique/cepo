@@ -26,9 +26,9 @@ pub fn requete_ogn(date: NaiveDate) -> String {
 
 pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
     println!("{}", requete);
-    /*let requete_parse = json::parse(requete.as_str()).unwrap();
+    let requete_parse = json::parse(requete.as_str()).unwrap();
     let devices = requete_parse["devices"];
-    */
+    
 
     /* on recupere le tableau de "devices" et les infos utiles sont: 
         modele "aircraft",
