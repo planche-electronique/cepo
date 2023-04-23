@@ -1,6 +1,7 @@
 use std::fs;
 use json::JsonValue::Array;
 use chrono::prelude::*;
+use chrono::format::strftime::StrftimeItems;
 
 struct Vol {
     numero: i32,
@@ -16,17 +17,14 @@ struct Vol {
     minute_atterissage: u8,
 }
 
-async fn requete_ogn() -> String {
-    let jour = 23;
-    let mois = 04;
-    let annee = 2023;
+async fn requete_ogn(date: NaiveDate) -> String {
     let airfield_code = "LFLE";
-    let reponse = reqwest::get(format!("http://flightbook.glidernet.org/api/logbook/{}/{}-{}-{}", airfield_code, annee, mois, jour)).await.unwrap();
+    let reponse = reqwest::get(format!("http://flightbook.glidernet.org/api/logbook/{}/{}", airfield_code, date.format("%Y-%m-%d").to_sring())).await.unwrap();
     let corps = reponse.text().await.unwrap();
     corps
 }
 
-fn traitement_requete_ogn(date: )
+fn traitement_requete_ogn(date: NaiveDate)
 
 fn liste_immatriculations() -> Vec<String> {
     let contenu_fichier = fs::read_to_string("immatriculations.json")
