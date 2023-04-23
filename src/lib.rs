@@ -95,8 +95,8 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
         
         let mut stop_json = vol_json["stop"].clone();
         let stop_str = match stop_json {
-            json::JsonValue::String(string) =>{
-                string
+            json::JsonValue::Short(short) =>{
+                short.as_str().to_string()
             },
             _ => {
                 "00h00".to_string()
