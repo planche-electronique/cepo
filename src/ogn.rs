@@ -28,13 +28,13 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
 
     for appareil in tableau_devices {
         let modele_json = appareil["aircraft"].clone();
-        let modele = modele_json.as_str().unwrap().to_string();
+        let modele = modele_json.as_str().unwrap_or_default().to_string();
         
         let categorie_json = appareil["aircraft_type"].clone();
         let categorie = categorie_json.as_u8().unwrap();
         
         let immatriculation_json = appareil["registration"].clone();
-        let immatriculation = immatriculation_json.as_str().unwrap().to_string();
+        let immatriculation = immatriculation_json.as_str().unwrap_or_default().to_string();
         
 
         let appareil_actuel = Appareil {
@@ -58,7 +58,7 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
     let mut index = 1;
     for vol_json in vols_json {
         let mut start_json = vol_json["start"].clone();
-        let start_str = start_json.take_string().unwrap().clone();
+        let start_str = start_json.take_string().unwrap_or_else(|| "00h00".to_string()).clone();
         let decollage = NaiveTime::parse_from_str(format!("{}",start_str).as_str(), "%Hh%M").unwrap();
         
         let mut stop_json = vol_json["stop"].clone();

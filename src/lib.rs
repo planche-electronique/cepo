@@ -1,7 +1,6 @@
 use std::fs;
 use json::JsonValue::Array;
 use chrono::prelude::*;
-use std::sync::mpsc::{Receiver, Sender};
 
 #[derive(Clone, PartialEq)]
 pub struct Vol {

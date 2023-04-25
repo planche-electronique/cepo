@@ -2,7 +2,6 @@ use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::fs;
 use std::thread;
-use std::sync::{mpsc};
 use chrono::prelude::*;
 mod ogn;
 use ogn::{requete_ogn, traitement_requete_ogn};
@@ -18,7 +17,7 @@ fn main() {
 
 
     //ca dans un thread
-    let date = NaiveDate::from_ymd_opt(2023, 04, 20).unwrap();
+    let date = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
     traitement_requete_ogn(date, requete_ogn(date));
         
 
