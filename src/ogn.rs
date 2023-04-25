@@ -2,7 +2,15 @@ use serveur::{Vol, Appareil};
 use chrono::prelude::*;
 use json::JsonValue::Array;
 use std::fs;
+use std::time;
+use std::thread;
 
+
+pub fn thread_ogn() {
+    let date = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
+    traitement_requete_ogn(date, requete_ogn(date));
+    thread::sleep(time::Duration::from_millis(300000));
+}
 
 
 pub fn requete_ogn(date: NaiveDate) -> String {
@@ -12,7 +20,7 @@ pub fn requete_ogn(date: NaiveDate) -> String {
     corps
 }
 
-pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
+fn traitement_requete_ogn(date: NaiveDate, requete: String) {
 
     let requete_parse = json::parse(requete.as_str()).unwrap();
     let devices = requete_parse["devices"].clone();

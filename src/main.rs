@@ -4,9 +4,10 @@ use std::fs;
 use std::thread;
 use chrono::prelude::*;
 mod ogn;
-use ogn::{requete_ogn, traitement_requete_ogn};
+use ogn::thread_ogn;
 use serveur::{ajouter_requete, enlever_requete};
 use std::sync::{Arc, Mutex};
+
 
 
 fn main() {
@@ -14,11 +15,10 @@ fn main() {
     let mut requetes_en_cours: Arc<Mutex<Vec<serveur::Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
-
-
-    //ca dans un thread
-    let date = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
-    traitement_requete_ogn(date, requete_ogn(date));
+    //on spawn le thread qui va s'occuper de 
+    thread::spawn(move || {
+        thread_ogn();
+    });
         
 
     for flux in ecouteur.incoming() {
