@@ -11,15 +11,6 @@ pub struct Vol {
 }
 
 impl Vol {
-    fn default() -> Self {
-        Vol {
-            numero_ogn: 0,
-            aeronef: "X-XXXX".to_string(),
-            decollage: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
-            atterissage: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
-        }
-    }
-
     pub fn to_json(self: &Self) -> String {
         let vol = json::object!{
             numero_ogn: self.numero_ogn,

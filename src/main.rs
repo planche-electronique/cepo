@@ -38,8 +38,6 @@ fn gestion_connexion(mut flux: TcpStream, requetes_en_cours: Arc<Mutex<Vec<serve
     let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
     ajouter_requete(requetes_en_cours_lock.to_vec(), adresse.clone());
     drop(requetes_en_cours_lock);
-            
-
 
     let mut tampon = [0; 1024];
 
@@ -51,7 +49,7 @@ fn gestion_connexion(mut flux: TcpStream, requetes_en_cours: Arc<Mutex<Vec<serve
     } else {
         ("HTTP/1.1 404 NOT FOUND", "404.html")
     };
-    //println!("Requête : {}", String::from_utf8_lossy(&tampon[..]));
+    
 
     let contenu= fs::read_to_string(nom_fichier).unwrap();
 
