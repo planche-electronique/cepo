@@ -13,8 +13,14 @@ def requete():
 
 threads = []
 
-for i in range(100) :
-    thread = threading.Thread(target=requete())
+def requetes():
+    for i in range(100) :
+        thread = threading.Thread(target=requete())
+        thread.start()
+
+
+for i in range(10) :
+    thread = threading.Thread(target=requetes())
     thread.start()
 
 
