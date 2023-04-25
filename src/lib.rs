@@ -65,58 +65,45 @@ fn liste_immatriculations() -> Vec<String> {
     immatriculations
 }
 
-pub fn thread_gestion(tx_co: Sender<String>, rx_co: Receiver<String>) {
-    let mut requetes_en_cours: Vec<Client> = Vec::new();
-    loop {
-        let message: String = rx_co.recv().unwrap();
-        let signe = &message[0..1];
-        let adresse = &message[1..message.len()];
-        match signe {
-            "+" => {
-                println!("une connection de gagnee pour {}", adresse);
-                let mut est_active: bool = false;
-                for mut client in requetes_en_cours.clone() {
-                    if client.adresse == adresse {
-                        if client.requetes_en_cours < 10 {
-                            client.requetes_en_cours += 1;
-                            est_active = true;
-                            tx_co.send("Ok".to_string()).unwrap();
-                        } else {
-                            println!("pas plus de requêtes pour {}", adresse);
-                            tx_co.send("No".to_string()).unwrap();
-                        }
-                    }
-                    if est_active == false {
-                        requetes_en_cours.push(Client {
-                            adresse: adresse.to_string(),
-                            requetes_en_cours: 1,
-                        });
-                        tx_co.send("Ok".to_string()).unwrap();
-                    }
-                }
-            },
-            "-" => {
-                println!("une connection de perdue pour {}", adresse);
-                for mut client in requetes_en_cours.clone() {
-                    if client.adresse == adresse {
-                        if client.requetes_en_cours != 1{
-                            client.requetes_en_cours -=1;
-                        } else {
-                            let index = requetes_en_cours.iter().position(|x| *x == client).unwrap();
-                            requetes_en_cours.remove(index);
-                        }
-                        
-                    }
-                }
-                tx_co.send("Ok".to_string()).unwrap();
-            },
-            _ => eprintln!("not a valid message"),
+
+pub fn ajouter_requete(mut requetes_en_cours: Vec<Client>, adresse: String) {
+    //println!("+1 connection : {}", adresse.clone());
+    let mut adresse_existe: bool = false;
+    for mut client in requetes_en_cours.clone() {
+        if client.adresse == adresse {
+            if client.requetes_en_cours < 10 {
+                client.requetes_en_cours += 1;
+                adresse_existe = true;
+            } else {
+                println!("pas plus de requêtes pour {}", adresse);
+            }
+        }
+        if adresse_existe == false {
+            requetes_en_cours.push(Client {
+                adresse: adresse.to_string(),
+                requetes_en_cours: 1,
+            });
+        }
+    }
+}
+
+pub fn enlever_requete(mut requetes_en_cours: Vec<Client>, adresse: String) {
+    //println!("-1 connection : {}", adresse.clone());
+    for mut client in requetes_en_cours.clone() {
+        if client.adresse == adresse {
+            if client.requetes_en_cours != 1{
+                client.requetes_en_cours -=1;
+            } else {
+                let index = requetes_en_cours.iter().position(|x| *x == client).unwrap();
+                requetes_en_cours.remove(index);
+            }
+            
         }
     }
 }
 
 #[derive(Clone, PartialEq)]
-struct Client {
+pub struct Client {
     adresse: String,
     requetes_en_cours: i32,
 }

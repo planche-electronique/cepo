@@ -6,48 +6,42 @@ use std::sync::{mpsc};
 use chrono::prelude::*;
 mod ogn;
 use ogn::{requete_ogn, traitement_requete_ogn};
-use serveur::thread_gestion;
+use serveur::{ajouter_requete, enlever_requete};
+use std::sync::{Arc, Mutex};
 
 
 fn main() {
+
+    let mut requetes_en_cours: Arc<Mutex<Vec<serveur::Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
-    let (tx_main, rx_co) = mpsc::channel();
-    let (tx_co, rx_main) = mpsc::channel();
 
 
     //ca dans un thread
     let date = NaiveDate::from_ymd_opt(2023, 04, 20).unwrap();
     traitement_requete_ogn(date, requete_ogn(date));
-
-    thread::spawn(move || {
-        thread_gestion(tx_co, rx_co);
-    });
         
 
     for flux in ecouteur.incoming() {
         let flux = flux.unwrap();
 
         let adresse = format!("{}", (flux.peer_addr().unwrap()));
-        let tx_main = tx_main.clone();
+        let requetes_en_cours = requetes_en_cours.clone();
         let adresse = adresse.clone();
-        tx_main.send(format!("+{}", adresse).to_owned()).unwrap();
-        match rx_main.recv().unwrap() {
-            string => {
-                if string.as_str() == "Ok"{
-                    thread::spawn(move || {
-                        gestion_connexion(flux);
-                        tx_main.send(format!("-{}", adresse).to_owned()).unwrap_or_else(|err| {
-                            eprintln!("erreur à l'envoi du message de {} : {}"
-                                , adresse, err);
-                        });
-                    });
-                };
-            }
-        }
-        
+        thread::spawn(move || {
+            let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
+            ajouter_requete(requetes_en_cours_lock.to_vec(), adresse.clone());
+            drop(requetes_en_cours_lock);
+            
+            gestion_connexion(flux);
+
+            let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
+            enlever_requete(requetes_en_cours_lock.to_vec(), adresse);
+            drop(requetes_en_cours_lock);
+        });
     }
 }
+        
 
 fn gestion_connexion(mut flux: TcpStream) {
 
