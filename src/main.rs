@@ -15,7 +15,7 @@ fn main() {
     let mut requetes_en_cours: Arc<Mutex<Vec<serveur::Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
-    //on spawn le thread qui va s'occuper de 
+    //on spawn le thread qui va s'occuper de ogn
     thread::spawn(move || {
         thread_ogn();
     });
@@ -23,26 +23,23 @@ fn main() {
 
     for flux in ecouteur.incoming() {
         let flux = flux.unwrap();
-
-        let adresse = format!("{}", (flux.peer_addr().unwrap()));
         let requetes_en_cours = requetes_en_cours.clone();
-        let adresse = adresse.clone();
+        
         thread::spawn(move || {
-            let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
-            ajouter_requete(requetes_en_cours_lock.to_vec(), adresse.clone());
-            drop(requetes_en_cours_lock);
-            
-            gestion_connexion(flux);
-
-            let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
-            enlever_requete(requetes_en_cours_lock.to_vec(), adresse);
-            drop(requetes_en_cours_lock);
+            gestion_connexion(flux, requetes_en_cours);
         });
     }
 }
         
 
-fn gestion_connexion(mut flux: TcpStream) {
+fn gestion_connexion(mut flux: TcpStream, requetes_en_cours: Arc<Mutex<Vec<serveur::Client>>>) {
+    let adresse = format!("{}", (flux.peer_addr().unwrap()));
+
+    let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
+    ajouter_requete(requetes_en_cours_lock.to_vec(), adresse.clone());
+    drop(requetes_en_cours_lock);
+            
+
 
     let mut tampon = [0; 1024];
 
@@ -65,7 +62,11 @@ fn gestion_connexion(mut flux: TcpStream) {
         contenu
     );
     flux.write(reponse.as_bytes()).unwrap();
-    flux.flush().unwrap();   
+    flux.flush().unwrap();
+
+    let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
+    enlever_requete(requetes_en_cours_lock.to_vec(), adresse);
+    drop(requetes_en_cours_lock);
 }
 
 mod tests;
