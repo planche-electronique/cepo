@@ -83,7 +83,16 @@ pub fn traitement_requete_ogn(date: NaiveDate, requete: String) {
             atterissage: atterissage,
         });
         index += 1;
-    }
+
+        let immatriculations = serveur::liste_immatriculations();
+        for vol in vols.clone() {
+            if !(immatriculations.iter().any(|immat| *immat == vol.aeronef )) {
+                //si l'immat n'est pas dans la liste
+                let index = vols.iter().position(|x| *x == vol).unwrap();
+                vols.remove(index); // on l'enleve
+            }
+        }
+    }   
 
     enregistrer_vols(vols, date);
 }

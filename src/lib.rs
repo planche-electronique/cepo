@@ -3,6 +3,7 @@ use json::JsonValue::Array;
 use chrono::prelude::*;
 use std::sync::mpsc::{Receiver, Sender};
 
+#[derive(Clone, PartialEq)]
 pub struct Vol {
     pub numero_ogn: i32,
     pub aeronef: String,
@@ -38,7 +39,7 @@ pub struct Appareil {
 }
 
 
-fn liste_immatriculations() -> Vec<String> {
+pub fn liste_immatriculations() -> Vec<String> {
     let contenu_fichier = fs::read_to_string("immatriculations.json")
         .expect("Probleme lors de la leture du fichier");
     let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
