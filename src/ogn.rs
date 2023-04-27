@@ -4,12 +4,17 @@ use json::JsonValue::Array;
 use std::fs;
 use std::time;
 use std::thread;
+use std::sync::{Arc, Mutex};
 
 
-pub fn thread_ogn() {
+
+pub fn thread_ogn(vols: Arc<Mutex<Vec<Vol>>>) {
     let date = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
-    traitement_requete_ogn(date, requete_ogn(date));
-    thread::sleep(time::Duration::from_millis(300000));
+    let mut vols_lock = vols.lock().unwrap();
+    *vols_lock = traitement_requete_ogn(requete_ogn(date));
+    enregistrer_vols(vols_lock.to_vec(), date);
+    drop(vols_lock);
+    thread::sleep(time::Duration::from_millis(300000)); // 5 minutes
 }
 
 
@@ -20,7 +25,7 @@ pub fn requete_ogn(date: NaiveDate) -> String {
     corps
 }
 
-fn traitement_requete_ogn(date: NaiveDate, requete: String) {
+fn traitement_requete_ogn(requete: String) -> Vec<Vol> {
 
     let requete_parse = json::parse(requete.as_str()).unwrap();
     let devices = requete_parse["devices"].clone();
@@ -100,9 +105,8 @@ fn traitement_requete_ogn(date: NaiveDate, requete: String) {
                 vols.remove(index); // on l'enleve
             }
         }
-    }   
-
-    enregistrer_vols(vols, date);
+    }
+    vols
 }
 
 

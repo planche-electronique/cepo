@@ -5,7 +5,7 @@ use std::thread;
 use chrono::prelude::*;
 mod ogn;
 use ogn::thread_ogn;
-use serveur::{ajouter_requete, enlever_requete};
+use serveur::{ajouter_requete, enlever_requete, Vol};
 use std::sync::{Arc, Mutex};
 
 
@@ -15,9 +15,10 @@ fn main() {
     let mut requetes_en_cours: Arc<Mutex<Vec<serveur::Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
+    let vols: Arc<Mutex<Vec<Vol>>> = Arc::new(Mutex::new(Vec::new()));
     //on spawn le thread qui va s'occuper de ogn
     thread::spawn(move || {
-        thread_ogn();
+        thread_ogn(vols);
     });
         
 
