@@ -16,9 +16,12 @@ fn main() {
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
     let vols: Arc<Mutex<Vec<Vol>>> = Arc::new(Mutex::new(Vec::new()));
+
+    let vols_thread = vols.clone();
+    
     //on spawn le thread qui va s'occuper de ogn
     thread::spawn(move || {
-        thread_ogn(vols);
+        thread_ogn(vols_thread);
     });
         
 
@@ -26,14 +29,20 @@ fn main() {
         let flux = flux.unwrap();
         let requetes_en_cours = requetes_en_cours.clone();
         
+        let vols = vols.clone();
+        
         thread::spawn(move || {
-            gestion_connexion(flux, requetes_en_cours);
+            gestion_connexion(flux, requetes_en_cours, vols);
         });
     }
 }
         
 
-fn gestion_connexion(mut flux: TcpStream, requetes_en_cours: Arc<Mutex<Vec<serveur::Client>>>) {
+fn gestion_connexion(
+    mut flux: TcpStream,
+    requetes_en_cours: Arc<Mutex<Vec<serveur::Client>>>, 
+    vols: Arc<Mutex<Vec<Vol>>>
+) {
     let adresse = format!("{}", (flux.peer_addr().unwrap()));
 
     let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
