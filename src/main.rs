@@ -18,6 +18,12 @@ fn main() {
 
     let vols_thread = vols.clone();
     
+    // creation du dossier de travail si besoin
+    let mut chemins = fs::read_dir("./").unwrap();
+    if !(chemins.any(|chemin| chemin.unwrap().path().to_str().unwrap().to_string() == "./dossier_de_travail")) {
+        fs::create_dir(format!("./dossier_de_travail")).unwrap();
+    }
+    
     //on spawn le thread qui va s'occuper de ogn
     thread::spawn(move || {
         thread_ogn(vols_thread);
