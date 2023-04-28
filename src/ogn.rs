@@ -127,7 +127,7 @@ fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
 
     let mut index = 1;
     for vol_json in vols_json {
-        let chemin = format!("./{}/{}/{}/{}.json", annee, mois, jour, index);
+        let chemin = format!("./dossier_de_travail/{}/{}/{}/{}.json", annee, mois, jour, index);
         let fichier = fs::read_to_string(chemin.clone()).unwrap_or_else(|err| {
             println!("fichier numero {} introuvable ou non ouvrable : {}", index, err.to_string());
             "".to_string()
@@ -143,39 +143,39 @@ fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
 }
 
 fn creer_chemin_jour(annee: String, mois: String, jour: String) {
-    let chemins = fs::read_dir("./").unwrap();
+    let chemins = fs::read_dir("./dossier_de_travail").unwrap();
     let mut annee_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier == format!("./{}", annee) {
+        if chemin_dossier == format!("./dossier_de_travail\\{}", annee) {
             annee_existe = true;
         }
     }
     if annee_existe == false {
-        fs::create_dir(format!("./{}", annee)).unwrap();
+        fs::create_dir(format!("./dossier_de_travail\\{}", annee)).unwrap();
     }
 
-    let chemins = fs::read_dir(format!("./{}", annee)).unwrap();
+    let chemins = fs::read_dir(format!("./dossier_de_travail\\{}", annee)).unwrap();
     let mut mois_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier == format!("./{}\\{}", annee, mois) {
+        if chemin_dossier == format!("./dossier_de_travail\\{}\\{}", annee, mois) {
             mois_existe = true;
         }
     }
     if mois_existe == false {
-        fs::create_dir(format!("./{}\\{}", annee, mois)).unwrap();
+        fs::create_dir(format!("./dossier_de_travail\\{}\\{}", annee, mois)).unwrap();
     }
 
-    let chemins = fs::read_dir(format!("./{}\\{}", annee, mois)).unwrap();
+    let chemins = fs::read_dir(format!("./dossier_de_travail\\{}\\{}", annee, mois)).unwrap();
     let mut jour_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier == format!("./{}\\{}\\{}", annee, mois, jour) {
+        if chemin_dossier == format!("./dossier_de_travail\\{}\\{}\\{}", annee, mois, jour) {
             jour_existe = true;
         }
     }
     if jour_existe == false {
-        fs::create_dir(format!("./{}/{}/{}", annee, mois, jour)).unwrap();
+        fs::create_dir(format!("./dossier_de_travail\\{}/{}/{}", annee, mois, jour)).unwrap();
     }
 }
