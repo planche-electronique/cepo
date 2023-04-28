@@ -74,7 +74,7 @@ fn traitement_requete_ogn(requete: String) -> Vec<Vol> {
         let start_str = start_json.take_string().unwrap_or_else(|| "00h00".to_string()).clone();
         let decollage = NaiveTime::parse_from_str(format!("{}",start_str).as_str(), "%Hh%M").unwrap();
         
-        let mut stop_json = vol_json["stop"].clone();
+        let stop_json = vol_json["stop"].clone();
         let stop_str = match stop_json {
             json::JsonValue::Short(short) =>{
                 short.as_str().to_string()
@@ -129,7 +129,7 @@ fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
     for vol_json in vols_json {
         let chemin = format!("./{}/{}/{}/{}.json", annee, mois, jour, index);
         let fichier = fs::read_to_string(chemin.clone()).unwrap_or_else(|err| {
-            println!("fichier numero {} introuvable ou non ouvrable", index);
+            println!("fichier numero {} introuvable ou non ouvrable : {}", index, err.to_string());
             "".to_string()
         });
                                 
@@ -143,7 +143,7 @@ fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
 }
 
 fn creer_chemin_jour(annee: String, mois: String, jour: String) {
-    let mut chemins = fs::read_dir("./").unwrap();
+    let chemins = fs::read_dir("./").unwrap();
     let mut annee_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
