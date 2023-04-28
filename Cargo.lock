@@ -794,6 +794,7 @@ name = "serveur"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "httparse",
  "json",
  "reqwest",
 ]

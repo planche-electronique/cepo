@@ -6,6 +6,7 @@ mod ogn;
 use ogn::thread_ogn;
 use serveur::{ajouter_requete, enlever_requete, Vol};
 use std::sync::{Arc, Mutex};
+use httparse;
 
 
 
@@ -57,23 +58,45 @@ fn gestion_connexion(
     let mut tampon = [0; 1024];
 
     flux.read(&mut tampon).unwrap();
-    let get = b"GET / HTTP/1.1\r\n";
+    let mut header = [httparse::EMPTY_HEADER; 1024];
+    let mut propriete_requete = httparse::Request::new(&mut header);
+    let _requetes_parse = propriete_requete.parse(&tampon).unwrap();
 
-    let (ligne_statut, nom_fichier) = if tampon.starts_with(get) {
-        ("HTTP/1.1 200 OK", "example.html")
+    let nom_fichier = match propriete_requete.path.unwrap_or_default() {
+        "/" => "./planche/example.html",
+        "/vols" => "vols",
+        "/vols.json" => "vols",
+        string => string
+    };
+    let mut ligne_statut = "HTTP/1.1 200 OK";
+    let contenu: String = if nom_fichier != "vols" {
+
+        fs::read_to_string(format!("./parametres{}", nom_fichier)).unwrap_or_else(|_| {
+            ligne_statut = "HTTP/1.1 404 NOT FOUND";
+            fs::read_to_string("./parametres/planche/404.html").unwrap_or_else(|err| {
+                eprintln!("pas de 404.html !! : {}", err);
+                "".to_string()
+            })
+        })
     } else {
-        ("HTTP/1.1 404 NOT FOUND", "404.html")
+        let vols_lock = vols.lock().unwrap();
+        let vols_vec = (*vols_lock).clone();
+        drop(vols_lock);
+        let mut vols_str = String::new();
+        for vol in vols_vec {
+            vols_str.push_str(vol.to_json().as_str());
+        }
+        vols_str
     };
     
-
-    let contenu= fs::read_to_string(nom_fichier).unwrap();
-
     let reponse = format!(
         "{}\r\nContent-Length: {}\r\n\r\n{}",
         ligne_statut,
         contenu.len(),
         contenu
     );
+
+    
     flux.write(reponse.as_bytes()).unwrap();
     flux.flush().unwrap();
 

@@ -30,7 +30,7 @@ pub struct Appareil {
 
 
 pub fn liste_immatriculations() -> Vec<String> {
-    let contenu_fichier = fs::read_to_string("immatriculations.json")
+    let contenu_fichier = fs::read_to_string("./parametres/immatriculations.json")
         .expect("Probleme lors de la leture du fichier");
     let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
     let immatriculations_json = match fichier_parse {   
