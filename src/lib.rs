@@ -5,7 +5,13 @@ use chrono::prelude::*;
 #[derive(Clone, PartialEq)]
 pub struct Vol {
     pub numero_ogn: i32,
+    pub code_decollage: String,
+    pub machine_decollage: String,
+    pub decolleur: String,
     pub aeronef: String,
+    pub code_vol: String,
+    pub pilote1: String,
+    pub pilote2: String,
     pub decollage: NaiveTime,
     pub atterissage: NaiveTime,
 }
@@ -14,7 +20,13 @@ impl Vol {
     pub fn to_json(self: &Self) -> String {
         let vol = json::object!{
             numero_ogn: self.numero_ogn,
+            code_decollage: *self.code_decollage,
+            machine_decollage: *self.machine_decollage,
+            decolleur: *self.decolleur,
             aeronef: *self.aeronef,
+            code_vol: *self.code_vol,
+            pilote1: *self.pilote1,
+            pilote2: *self.pilote2,
             decollage: *self.decollage.format("%Hh%M").to_string(),
             atterissage: *self.atterissage.format("%Hh%M").to_string(),
         };

@@ -91,7 +91,13 @@ fn traitement_requete_ogn(requete: String) -> Vec<Vol> {
         
         vols.push( Vol {
             numero_ogn: index,
+            code_decollage: "T".to_string(),
+            machine_decollage: "SAVHYDRO".to_string(),
+            decolleur: "BOB".to_string(),
             aeronef: immatriculation,
+            code_vol: "T".to_string(),
+            pilote1: "".to_string(),
+            pilote2: "".to_string(),
             decollage: decollage,
             atterissage: atterissage,
         });
