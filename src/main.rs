@@ -83,14 +83,20 @@ fn gestion_connexion(
         let vols_vec = (*vols_lock).clone();
         drop(vols_lock);
         let mut vols_str = String::new();
+        vols_str.push_str("[");
         for vol in vols_vec {
             vols_str.push_str(vol.to_json().as_str());
+            vols_str.push_str(",");
         }
+        vols_str = vols_str[0..(vols_str.len()-1)].to_string();
+        vols_str.push_str("]");
         vols_str
     };
     
     let reponse = format!(
-        "{}\r\nContent-Length: {}\r\n\r\n{}",
+        "{}\r\nContent-Length: {}\n\
+        Content-Type: application/json\
+        \nAccess-Control-Allow-Origin: *\r\n\r\n{}",
         ligne_statut,
         contenu.len(),
         contenu
