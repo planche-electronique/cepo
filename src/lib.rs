@@ -1,6 +1,6 @@
-use std::fs;
-use json::JsonValue::Array;
 use chrono::prelude::*;
+use json::JsonValue::Array;
+use std::fs;
 
 #[derive(Clone, PartialEq)]
 pub struct Vol {
@@ -18,7 +18,7 @@ pub struct Vol {
 
 impl Vol {
     pub fn to_json(self: &Self) -> String {
-        let vol = json::object!{
+        let vol = json::object! {
             numero_ogn: self.numero_ogn,
             code_decollage: *self.code_decollage,
             machine_decollage: *self.machine_decollage,
@@ -33,33 +33,29 @@ impl Vol {
         vol.dump()
     }
 }
-
 pub struct Appareil {
     pub modele: String,
     pub categorie: u8,
     pub immatriculation: String,
 }
 
-
 pub fn liste_immatriculations() -> Vec<String> {
     let contenu_fichier = fs::read_to_string("./parametres/immatriculations.json")
         .expect("Probleme lors de la leture du fichier");
     let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
-    let immatriculations_json = match fichier_parse {   
-        Array(vecteur) => {
-            vecteur
-        },
+    let immatriculations_json = match fichier_parse {
+        Array(vecteur) => vecteur,
         _ => {
             eprintln!("immatriculations.json n'est pas un tableau");
             Vec::new()
-        },
+        }
     };
     let mut immatriculations = Vec::new();
     for immatriculation_json in immatriculations_json {
         match immatriculation_json {
             json::JsonValue::Short(immatriculation) => {
                 immatriculations.push(immatriculation.as_str().to_string());
-            },
+            }
             _ => {
                 eprintln!("{} n'est pas de type short", immatriculation_json);
             }
@@ -67,7 +63,6 @@ pub fn liste_immatriculations() -> Vec<String> {
     }
     immatriculations
 }
-
 
 pub fn ajouter_requete(mut requetes_en_cours: Vec<Client>, adresse: String) {
     //println!("+1 connection : {}", adresse.clone());
@@ -94,13 +89,12 @@ pub fn enlever_requete(mut requetes_en_cours: Vec<Client>, adresse: String) {
     //println!("-1 connection : {}", adresse.clone());
     for mut client in requetes_en_cours.clone() {
         if client.adresse == adresse {
-            if client.requetes_en_cours != 1{
-                client.requetes_en_cours -=1;
+            if client.requetes_en_cours != 1 {
+                client.requetes_en_cours -= 1;
             } else {
                 let index = requetes_en_cours.iter().position(|x| *x == client).unwrap();
                 requetes_en_cours.remove(index);
             }
-            
         }
     }
 }
