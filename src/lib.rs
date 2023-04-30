@@ -33,6 +33,7 @@ impl Vol {
         vol.dump()
     }
 }
+
 pub struct Appareil {
     pub modele: String,
     pub categorie: u8,
@@ -103,4 +104,10 @@ pub fn enlever_requete(mut requetes_en_cours: Vec<Client>, adresse: String) {
 pub struct Client {
     adresse: String,
     requetes_en_cours: i32,
+}
+
+pub struct MiseAJour {
+    numero_vol: u8,
+    champ_mis_a_jour: String,
+    nouvelle_valeur: json::JsonValue,
 }
