@@ -27,8 +27,8 @@ impl Vol {
             code_vol: *self.code_vol,
             pilote1: *self.pilote1,
             pilote2: *self.pilote2,
-            decollage: *self.decollage.format("%Hh%M").to_string(),
-            atterissage: *self.atterissage.format("%Hh%M").to_string(),
+            decollage: *self.decollage.format("%H:%M").to_string(),
+            atterissage: *self.atterissage.format("%H:%M").to_string(),
         };
         vol.dump()
     }
