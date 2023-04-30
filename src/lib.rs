@@ -109,31 +109,36 @@ pub struct Client {
 pub struct MiseAJour {
     numero_vol: u8,
     champ_mis_a_jour: String,
-    nouvelle_valeur: json::JsonValue,
+    nouvelle_valeur: String,
 }
 
 impl MiseAJour {
     pub fn parse(self: &mut Self, texte_json: json::JsonValue) -> Result<(), String> {
         match texte_json {
             json::JsonValue::Object(objet) => {
-                self.numero_vol = match objet["numero_vol"] {
-                    Number(nombre) => nombre,
-                    _ => return Err("erreur: pas de champ du numero de vol".to_string())
-                };
-                
-                self.champ_mis_a_jour = match objet["champ_mis_a_jour"] {
-                    Short(court) => court,
-                    _ => return Err("erreur: pas de champ de nouvelle valeur".to_string())
-                };
-                
-                self.nouvelle_valeur = match objet["nouvelle_valeur"] {
-                    Number(nombre) => nombre,
-                    _ => return Err("erreur: pas de valeur pour la nouvelle valeur")
-                };
-                
+                self.numero_vol = objet["numero_vol"].as_u8().unwrap_or_else(|| {
+                    eprintln!("pas de numero de vol dans la requete");
+                    0
+                });
+
+                self.champ_mis_a_jour = objet["champ_mis_a_jour"]
+                    .as_str()
+                    .unwrap_or_else(|| {
+                        eprintln!("pas le bon champ pour la nouvelle valeur");
+                        ""
+                    })
+                    .to_string();
+
+                self.nouvelle_valeur = objet["nouvelle_valeur"]
+                    .as_str()
+                    .unwrap_or_else(|| {
+                        eprintln!("pas la bonne valeur pour la nouvelle valeur");
+                        ""
+                    })
+                    .to_string();
             }
             _ => {
-                return Err("erreur: pas un objet json!!!".to_string())
+                eprintln!("pas un objet json");
             }
         };
         Ok(())
