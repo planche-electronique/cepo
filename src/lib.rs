@@ -111,3 +111,31 @@ pub struct MiseAJour {
     champ_mis_a_jour: String,
     nouvelle_valeur: json::JsonValue,
 }
+
+impl MiseAJour {
+    pub fn parse(self: &mut Self, texte_json: json::JsonValue) -> Result<(), String> {
+        match texte_json {
+            json::JsonValue::Object(objet) => {
+                self.numero_vol = match objet["numero_vol"] {
+                    Number(nombre) => nombre,
+                    _ => return Err("erreur: pas de champ du numero de vol".to_string())
+                };
+                
+                self.champ_mis_a_jour = match objet["champ_mis_a_jour"] {
+                    Short(court) => court,
+                    _ => return Err("erreur: pas de champ de nouvelle valeur".to_string())
+                };
+                
+                self.nouvelle_valeur = match objet["nouvelle_valeur"] {
+                    Number(nombre) => nombre,
+                    _ => return Err("erreur: pas de valeur pour la nouvelle valeur")
+                };
+                
+            }
+            _ => {
+                return Err("erreur: pas un objet json!!!".to_string())
+            }
+        };
+        Ok(())
+    }
+}
