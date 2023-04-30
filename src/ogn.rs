@@ -91,11 +91,11 @@ fn traitement_requete_ogn(requete: String) -> Vec<Vol> {
         
         vols.push( Vol {
             numero_ogn: index,
-            code_decollage: "T".to_string(),
-            machine_decollage: "SAVHYDRO".to_string(),
-            decolleur: "BOB".to_string(),
+            code_decollage: "".to_string(),
+            machine_decollage: "".to_string(),
+            decolleur: "".to_string(),
             aeronef: immatriculation,
-            code_vol: "T".to_string(),
+            code_vol: "".to_string(),
             pilote1: "".to_string(),
             pilote2: "".to_string(),
             decollage: decollage,
