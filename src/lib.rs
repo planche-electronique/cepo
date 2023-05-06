@@ -120,6 +120,7 @@ impl MiseAJour {
             nouvelle_valeur: String::default()
         }
     }
+    
     pub fn parse(self: &mut Self, texte_json: json::JsonValue) -> Result<(), String> {
         match texte_json {
             json::JsonValue::Object(objet) => {

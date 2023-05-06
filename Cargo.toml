@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bodyparser = "0.8.0"
 chrono = "0.4.24"
 httparse = "1.8.0"
 json = "0.12.4"
