@@ -113,6 +113,13 @@ pub struct MiseAJour {
 }
 
 impl MiseAJour {
+    pub fn new() -> Self {
+        MiseAJour {
+            numero_vol: u8::default(),
+            champ_mis_a_jour: String::default(),
+            nouvelle_valeur: String::default()
+        }
+    }
     pub fn parse(self: &mut Self, texte_json: json::JsonValue) -> Result<(), String> {
         match texte_json {
             json::JsonValue::Object(objet) => {
