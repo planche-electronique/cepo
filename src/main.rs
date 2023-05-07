@@ -3,9 +3,9 @@ use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 mod ogn;
-use httparse;
 use ogn::thread_ogn;
 use serveur::{ajouter_requete, enlever_requete, Vol};
+use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
 
 fn main() {
@@ -52,14 +52,13 @@ fn gestion_connexion(
     ajouter_requete(requetes_en_cours_lock.to_vec(), adresse.clone());
     drop(requetes_en_cours_lock);
 
-    let mut tampon = [0; 1024];
-
+    let mut tampon = [0; 16384];
     flux.read(&mut tampon).unwrap();
-    let mut header = [httparse::EMPTY_HEADER; 1024];
-    let mut propriete_requete = httparse::Request::new(&mut header);
-    let _requetes_parse = propriete_requete.parse(&tampon).unwrap();
 
-    let nom_fichier = match propriete_requete.path.unwrap_or_default() {
+    let requete_brute = String::from_utf8_lossy(&tampon).to_owned();
+    let requete_parse = request::Request::from(&requete_brute).unwrap();
+    let chemin = requete_parse.path;
+    let nom_fichier = match chemin.as_str() {
         "/" => "./planche/example.html",
         "/vols" => "vols",
         "/vols.json" => "vols",
@@ -67,7 +66,7 @@ fn gestion_connexion(
     };
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
-    let contenu: String = if ((nom_fichier != "vols") || (nom_fichier != "miseajour")) {
+    let contenu: String = if (nom_fichier != "vols") || (nom_fichier != "miseajour") {
         fs::read_to_string(format!("./parametres{}", nom_fichier)).unwrap_or_else(|_| {
             ligne_statut = "HTTP/1.1 404 NOT FOUND";
             fs::read_to_string("./parametres/planche/404.html").unwrap_or_else(|err| {
@@ -93,6 +92,7 @@ fn gestion_connexion(
         );
         vols_str
     } else {
+        "".to_string()
     };
 
     let reponse = format!(
