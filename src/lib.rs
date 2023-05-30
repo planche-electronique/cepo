@@ -154,7 +154,7 @@ impl MiseAJour {
 }
 
 // on crée une fonction pour mettre la mise à jour dans le vecteur Vols du jour
-fn mettre_a_jour(mut vols: Vec<Vol>, mise_a_jour: MiseAJour) {
+pub fn mettre_a_jour(mut vols: Vec<Vol>, mise_a_jour: MiseAJour) {
     for mut vol in vols {
         if vol.numero_ogn == mise_a_jour.numero_vol as i32 {
             match mise_a_jour.champ_mis_a_jour.clone().as_str() {
