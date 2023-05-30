@@ -94,7 +94,8 @@ fn gestion_connexion(
         vols_str
     } else if nom_fichier == "miseajour" {
         // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
-        let mise_a_jour = MiseAJour::new().parse(json::parse(corps_json.as_str()).unwrap()).unwrap();
+        let mut mise_a_jour = MiseAJour::new();
+        mise_a_jour.parse(json::parse(corps_json.as_str()).unwrap()).unwrap();
         
         let vols_lock = vols.lock().unwrap();
         let vols_vec = (*vols_lock).clone();
