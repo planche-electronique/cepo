@@ -91,6 +91,9 @@ fn gestion_connexion(
             Access-Control-Allow-Origin: *",
         );
         vols_str
+    } else if nom_fichier == "miseajour" {
+        // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
+        String::from("ok!")
     } else {
         "".to_string()
     };
