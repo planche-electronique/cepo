@@ -4,7 +4,7 @@ use std::net::{TcpListener, TcpStream};
 use std::thread;
 mod ogn;
 use ogn::thread_ogn;
-use serveur::{ajouter_requete, enlever_requete, Vol, MiseAJour, mettre_a_jour};
+use serveur::{ajouter_requete, enlever_requete, mettre_a_jour, MiseAJour, Vol};
 use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
 
@@ -67,7 +67,14 @@ fn gestion_connexion(
     };
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
-    let contenu: String = if (nom_fichier != "vols") || (nom_fichier != "miseajour") {
+    let contenu: String = if (nom_fichier != "vols") && (nom_fichier != "miseajour") {
+        if &nom_fichier[nom_fichier.len() - 5..nom_fichier.len()] == ".json" {
+            println!("ok!");
+            headers.push_str(
+                "Content-Type: application/json\n\
+                Access-Control-Allow-Origin: *",
+            );
+        }
         fs::read_to_string(format!("./parametres{}", nom_fichier)).unwrap_or_else(|_| {
             ligne_statut = "HTTP/1.1 404 NOT FOUND";
             fs::read_to_string("./parametres/planche/404.html").unwrap_or_else(|err| {
@@ -95,11 +102,13 @@ fn gestion_connexion(
     } else if nom_fichier == "miseajour" {
         // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
         let mut mise_a_jour = MiseAJour::new();
-        mise_a_jour.parse(json::parse(corps_json.as_str()).unwrap()).unwrap();
-        
+        mise_a_jour
+            .parse(json::parse(corps_json.as_str()).unwrap())
+            .unwrap();
+
         let vols_lock = vols.lock().unwrap();
         let vols_vec = (*vols_lock).clone();
-        mettre_a_jour(vols_vec, mise_a_jour);        
+        mettre_a_jour(vols_vec, mise_a_jour);
         drop(vols_lock);
 
         String::from("ok!")
