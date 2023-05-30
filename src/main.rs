@@ -4,7 +4,7 @@ use std::net::{TcpListener, TcpStream};
 use std::thread;
 mod ogn;
 use ogn::thread_ogn;
-use serveur::{ajouter_requete, enlever_requete, Vol};
+use serveur::{ajouter_requete, enlever_requete, Vol, MiseAJour, mettre_a_jour};
 use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
 
@@ -58,6 +58,7 @@ fn gestion_connexion(
     let requete_brute = String::from_utf8_lossy(&tampon).to_owned();
     let requete_parse = request::Request::from(&requete_brute).unwrap();
     let chemin = requete_parse.path;
+    let corps_json = requete_parse.body;
     let nom_fichier = match chemin.as_str() {
         "/" => "./planche/example.html",
         "/vols" => "vols",
@@ -93,6 +94,13 @@ fn gestion_connexion(
         vols_str
     } else if nom_fichier == "miseajour" {
         // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
+        let mise_a_jour = MiseAJour::new().parse(json::parse(corps_json.as_str()).unwrap()).unwrap();
+        
+        let vols_lock = vols.lock().unwrap();
+        let vols_vec = (*vols_lock).clone();
+        mettre_a_jour(vols_vec, mise_a_jour);        
+        drop(vols_lock);
+
         String::from("ok!")
     } else {
         "".to_string()
