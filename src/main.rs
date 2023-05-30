@@ -58,6 +58,7 @@ fn gestion_connexion(
     let requete_brute = String::from_utf8_lossy(&tampon).to_owned();
     let requete_parse = request::Request::from(&requete_brute).unwrap();
     let chemin = requete_parse.path;
+    println!("{}", chemin);
     let corps_json = requete_parse.body;
     let nom_fichier = match chemin.as_str() {
         "/" => "./planche/example.html",
@@ -67,12 +68,11 @@ fn gestion_connexion(
     };
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
-    let contenu: String = if (nom_fichier != "vols") && (nom_fichier != "miseajour") {
-        if &nom_fichier[nom_fichier.len() - 5..nom_fichier.len()] == ".json" {
-            println!("ok!");
+    let contenu: String = if ((nom_fichier != "vols") && (nom_fichier != "miseajour")) {
+        if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string() == ".json".to_string() {
             headers.push_str(
-                "Content-Type: application/json\n\
-                Access-Control-Allow-Origin: *",
+                "Content-Type: application/json\
+                \nAccess-Control-Allow-Origin: *",
             );
         }
         fs::read_to_string(format!("./parametres{}", nom_fichier)).unwrap_or_else(|_| {
@@ -83,21 +83,25 @@ fn gestion_connexion(
             })
         })
     } else if nom_fichier == "vols" {
+        println!("vols");
         let vols_lock = vols.lock().unwrap();
         let vols_vec = (*vols_lock).clone();
         drop(vols_lock);
         let mut vols_str = String::new();
         vols_str.push_str("[");
         for vol in vols_vec {
+            println!("1");
             vols_str.push_str(vol.to_json().as_str());
             vols_str.push_str(",");
+            println!("{}", vol.to_json().as_str());
         }
-        vols_str = vols_str[0..(vols_str.len() - 1)].to_string();
-        vols_str.push_str("]");
+        vols_str = vols_str[0..(vols_str.len() - 1)].to_string(); // on enleve la virgule de trop
+        vols_str.push_str("]"); //on ferme
         headers.push_str(
-            "Content-Type: application/json\n\
-            Access-Control-Allow-Origin: *",
+            "Content-Type: application/json\
+            \nAccess-Control-Allow-Origin: *",
         );
+        println!("{}", vols_str);
         vols_str
     } else if nom_fichier == "miseajour" {
         // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
@@ -119,9 +123,9 @@ fn gestion_connexion(
     let reponse = format!(
         "{}\r\nContent-Length: {}\n\
         {}\r\n\r\n{}",
-        headers,
         ligne_statut,
         contenu.len(),
+        headers,
         contenu
     );
 
