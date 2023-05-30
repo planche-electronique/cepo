@@ -115,7 +115,7 @@ pub struct MiseAJour {
 impl MiseAJour {
     pub fn new() -> Self {
         MiseAJour {
-            numero_vol: u8::default(),
+            numero_vol: u8::default(), //numero du vol **OGN**
             champ_mis_a_jour: String::default(),
             nouvelle_valeur: String::default()
         }
@@ -150,5 +150,31 @@ impl MiseAJour {
             }
         };
         Ok(())
+    }
+}
+
+// on crée une fonction pour mettre la mise à jour dans le vecteur Vols du jour
+fn mise_a_jour(mut vols: Vec<Vol>, mise_a_jour: MiseAJour) {
+    for mut vol in vols {
+        if vol.numero_ogn == mise_a_jour.numero_vol as i32 {
+            match mise_a_jour.champ_mis_a_jour.clone().as_str() {
+                "code_decollage"    => vol.code_decollage    = mise_a_jour.nouvelle_valeur.clone(),
+                "machine_decollage" => vol.machine_decollage = mise_a_jour.nouvelle_valeur.clone(), 
+                "decolleur"         => vol.decolleur         = mise_a_jour.nouvelle_valeur.clone(), 
+                "aeronef"           => vol.aeronef           = mise_a_jour.nouvelle_valeur.clone(), 
+                "code_vol"          => vol.code_vol          = mise_a_jour.nouvelle_valeur.clone(),
+                "pilote1"           => vol.pilote1           = mise_a_jour.nouvelle_valeur.clone(), 
+                "pilote2"           => vol.pilote2           = mise_a_jour.nouvelle_valeur.clone(), 
+                "decollage" => {
+                    vol.decollage = NaiveTime::parse_from_str(format!("{}", mise_a_jour.nouvelle_valeur.clone()).as_str(), "%Hh%M").unwrap();
+                },
+                "atterissage" => {
+                    vol.atterissage = NaiveTime::parse_from_str(format!("{}", mise_a_jour.nouvelle_valeur.clone()).as_str(), "%Hh%M").unwrap();
+                },
+                _ => {
+                    eprintln!("Requète de mise a jour mauvaise.");
+                }
+            }
+        }
     }
 }
