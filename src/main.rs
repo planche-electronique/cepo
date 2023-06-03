@@ -15,7 +15,7 @@ fn main() {
 
     let vols: Arc<Mutex<Vec<Vol>>> = Arc::new(Mutex::new(Vec::new()));
     let vols_lock = vols.lock().unwrap();
-    lire_vols_date((*vols_lock).clone(), 2023, 04, 05);
+    lire_vols_date((*vols_lock).clone(), 2023, 04, 25);
     drop(vols_lock);
 
     let vols_thread = vols.clone();
@@ -62,7 +62,7 @@ fn gestion_connexion(
     let requete_brute = String::from_utf8_lossy(&tampon).to_owned();
     let requete_parse = request::Request::from(&requete_brute).unwrap();
     let chemin = requete_parse.path;
-    println!("{}", chemin);
+
     let corps_json = requete_parse.body;
     let nom_fichier = match chemin.as_str() {
         "/" => "./planche/example.html",
@@ -88,14 +88,13 @@ fn gestion_connexion(
             })
         })
     } else if nom_fichier == "vols" {
-        println!("vols");
+
         let vols_lock = vols.lock().unwrap();
         let vols_vec = (*vols_lock).clone();
         drop(vols_lock);
         let mut vols_str = String::new();
         vols_str.push_str("[\n");
         for vol in vols_vec {
-            println!("1");
             vols_str.push_str(vol.to_json().as_str());
             vols_str.push_str(",");
             println!("{}", vol.to_json().as_str());
@@ -106,7 +105,6 @@ fn gestion_connexion(
             "Content-Type: application/json\
             \nAccess-Control-Allow-Origin: *",
         );
-        println!("{}", vols_str);
         vols_str
     } else if nom_fichier == "miseajour" {
         // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
@@ -144,18 +142,34 @@ fn gestion_connexion(
 
 fn lire_vols_chemin(mut vols: Vec<Vol>, chemin_jour: String) {
     let fichiers_vols = fs::read_dir(format!("./dossier_de_travail/{}", chemin_jour)).unwrap();
-    
+
     for vol in fichiers_vols {
-        let fichier_vol_str = fs::read_to_string(format!("./dossier_de_travail/{}/{}", chemin_jour, vol.unwrap().path().to_str().unwrap())).unwrap();
+        let nom_fichier = vol.unwrap().path().to_str().unwrap().to_string();
+
+        let fichier_vol_str = fs::read_to_string(format!("{}", nom_fichier)).unwrap();
         let vol_json_parse = Vol::from_json(json::parse(fichier_vol_str.as_str()).unwrap());
         vols.push(vol_json_parse);
     }
 }
 
 fn lire_vols_date(vols: Vec<Vol>, annee: i32, mois: u32, jour: u32) {
+    let jour_str: String;
+    if jour > 9 {
+        jour_str = jour.to_string();
+    } else {
+        jour_str = format!("0{}", jour.to_string());
+    }
     
-    creer_chemin_jour(annee.to_string(), mois.to_string(), jour.to_string());
-    let chemin = format!("./{}/{}/{}", annee, mois, jour);
+    let mois_str: String;
+    if mois > 9 {
+        mois_str = mois.to_string();
+    } else {
+        mois_str = format!("0{}", mois.to_string());
+    }
+    
+    creer_chemin_jour(annee.to_string(), mois_str.clone(), jour_str.clone());
+    let chemin = format!("./{}/{}/{}", annee, mois_str, jour_str);
+
     lire_vols_chemin(vols, chemin);
 }
 
