@@ -65,16 +65,16 @@ impl Vol {
 
     pub fn from_json(mut json_parse: JsonValue) -> Self {
         Vol {
-            numero_ogn: json_parse["numero_ogn"].as_i32().unwrap(),
-            code_decollage: json_parse["code_decollage"].take_string().unwrap(),
-            machine_decollage: json_parse["machine_decollage"].take_string().unwrap(),
-            decolleur: json_parse["decolleur"].take_string().unwrap(),
-            aeronef: json_parse["aeronef"].take_string().unwrap(),
-            code_vol: json_parse["code_vol"].take_string().unwrap(),
-            pilote1: json_parse["pilote1"].take_string().unwrap(),
-            pilote2: json_parse["pilote2"].take_string().unwrap(),
-            decollage: NaiveTime::parse_from_str(json_parse["decollage"].take_string().unwrap().as_str(), "%H:%M").unwrap(),
-            atterissage: NaiveTime::parse_from_str(json_parse["atterissage"].take_string().unwrap().as_str(), "%H:%M").unwrap(),
+            numero_ogn: json_parse["numero_ogn"].as_i32().unwrap_or_default(),
+            code_decollage: json_parse["code_decollage"].take_string().unwrap_or_else(||{String::from("")}),
+            machine_decollage: json_parse["machine_decollage"].take_string().unwrap_or_else(||{String::from("")}),
+            decolleur: json_parse["decolleur"].take_string().unwrap_or_else(||{String::from("")}),
+            aeronef: json_parse["aeronef"].take_string().unwrap_or_else(||{String::from("")}),
+            code_vol: json_parse["code_vol"].take_string().unwrap_or_else(||{String::from("")}),
+            pilote1: json_parse["pilote1"].take_string().unwrap_or_else(||{String::from("")}),
+            pilote2: json_parse["pilote2"].take_string().unwrap_or_else(||{String::from("")}),
+            decollage: NaiveTime::parse_from_str(json_parse["decollage"].take_string().unwrap().as_str(), "%Hh%M").unwrap(),
+            atterissage: NaiveTime::parse_from_str(json_parse["atterissage"].take_string().unwrap().as_str(), "%Hh%M").unwrap(),
         }
     }
 }
