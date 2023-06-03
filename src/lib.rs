@@ -231,3 +231,13 @@ pub fn mettre_a_jour(mut vols: Vec<Vol>, mise_a_jour: MiseAJour) {
         }
     }
 }
+
+pub fn nom_fichier_date(nombre: i32) -> String {
+    let nombre_str: String;
+    if nombre > 9 {
+        nombre_str = nombre.to_string();
+    } else {
+        nombre_str = format!("0{}", nombre.to_string());
+    } 
+    nombre_str
+}

@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use json::JsonValue::Array;
-use serveur::{Appareil, Vol};
+use serveur::{Appareil, Vol, nom_fichier_date};
 use std::fs;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -134,11 +134,11 @@ fn traitement_requete_ogn(requete: String) -> Vec<Vol> {
 }
 
 fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
-    let annee = date.format("%Y").to_string();
-    let mois = date.format("%m").to_string();
-    let jour = date.format("%d").to_string();
+    let annee = date.year();
+    let mois = date.month();
+    let jour = date.day();
 
-    creer_chemin_jour(annee.clone(), mois.clone(), jour.clone());
+    creer_chemin_jour(annee, mois, jour);
 
     let mut vols_json = Vec::new();
     for vol in vols {
@@ -167,7 +167,13 @@ fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
     }
 }
 
-pub fn creer_chemin_jour(annee: String, mois: String, jour: String) {
+pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
+    
+    let jour_str = nom_fichier_date(jour as i32);
+    let mois_str = nom_fichier_date(mois as i32);
+    
+    
+    
     let chemins = fs::read_dir("./dossier_de_travail").unwrap();
     let mut annee_existe = false;
     for chemin in chemins {
@@ -184,23 +190,23 @@ pub fn creer_chemin_jour(annee: String, mois: String, jour: String) {
     let mut mois_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier == format!("./dossier_de_travail\\{}\\{}", annee, mois) {
+        if chemin_dossier == format!("./dossier_de_travail\\{}\\{}", annee, mois_str) {
             mois_existe = true;
         }
     }
     if mois_existe == false {
-        fs::create_dir(format!("./dossier_de_travail\\{}\\{}", annee, mois)).unwrap();
+        fs::create_dir(format!("./dossier_de_travail\\{}\\{}", annee, mois_str)).unwrap();
     }
 
-    let chemins = fs::read_dir(format!("./dossier_de_travail\\{}\\{}", annee, mois)).unwrap();
+    let chemins = fs::read_dir(format!("./dossier_de_travail\\{}\\{}", annee, mois_str)).unwrap();
     let mut jour_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier == format!("./dossier_de_travail\\{}\\{}\\{}", annee, mois, jour) {
+        if chemin_dossier == format!("./dossier_de_travail\\{}\\{}\\{}", annee, mois_str, jour_str) {
             jour_existe = true;
         }
     }
     if jour_existe == false {
-        fs::create_dir(format!("./dossier_de_travail\\{}/{}/{}", annee, mois, jour)).unwrap();
+        fs::create_dir(format!("./dossier_de_travail\\{}/{}/{}", annee, mois_str, jour_str)).unwrap();
     }
 }

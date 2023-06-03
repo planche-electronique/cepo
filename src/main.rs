@@ -5,7 +5,7 @@ use std::thread;
 mod ogn;
 use chrono::{NaiveDate, Datelike, Utc};
 use ogn::{thread_ogn, creer_chemin_jour};
-use serveur::{ajouter_requete, enlever_requete, mettre_a_jour, MiseAJour, Vol};
+use serveur::{ajouter_requete, enlever_requete, mettre_a_jour, MiseAJour, Vol, nom_fichier_date};
 use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
 
@@ -157,21 +157,12 @@ fn vols_enregistres_chemin(chemin_jour: String) -> Vec<Vol>{
 }
 
 fn vols_enregistres_date(annee: i32, mois: u32, jour: u32) -> Vec<Vol>{
-    let jour_str: String;
-    if jour > 9 {
-        jour_str = jour.to_string();
-    } else {
-        jour_str = format!("0{}", jour.to_string());
-    }
     
-    let mois_str: String;
-    if mois > 9 {
-        mois_str = mois.to_string();
-    } else {
-        mois_str = format!("0{}", mois.to_string());
-    }
+    creer_chemin_jour(annee, mois, jour);
     
-    creer_chemin_jour(annee.to_string(), mois_str.clone(), jour_str.clone());
+    let jour_str = nom_fichier_date(jour as i32);
+    let mois_str = nom_fichier_date(mois as i32);
+    
     let chemin = format!("./{}/{}/{}", annee, mois_str, jour_str);
 
     vols_enregistres_chemin(chemin)
