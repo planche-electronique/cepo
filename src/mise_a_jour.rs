@@ -1,6 +1,7 @@
 use chrono::prelude::*;
 use crate::vol::Vol;
 
+#[derive(Debug, PartialEq)]
 pub struct MiseAJour {
     numero_vol: u8,
     champ_mis_a_jour: String,
@@ -16,7 +17,7 @@ impl MiseAJour {
         }
     }
 
-    pub fn parse(self: &mut Self, texte_json: json::JsonValue) -> Result<(), String> {
+    pub fn parse(&mut self, texte_json: json::JsonValue) -> Result<(), String> {
         match texte_json {
             json::JsonValue::Object(objet) => {
                 self.numero_vol = objet["numero_vol"].as_u8().unwrap_or_else(|| {
@@ -88,3 +89,25 @@ impl MettreAJour for Vec<Vol> {
     }            
 }
 
+mod tests {
+
+    #[test]
+    fn mise_a_jour_parse_test() {
+        use crate::MiseAJour;
+        let mise_a_jour_declaree = MiseAJour {
+            numero_vol: 1,
+            champ_mis_a_jour: String::from("code_vol"),
+            nouvelle_valeur: String::from("M")
+        };
+        
+        let mut mise_a_jour_parse = MiseAJour::new();
+        let _ = mise_a_jour_parse.parse(json::parse(" \
+            { \
+                \"numero_vol\": 1, \
+                \"champ_mis_a_jour\": \"code_vol\", \
+                \"nouvelle_valeur\": \"M\" \
+            }").unwrap());
+        
+        assert_eq!(mise_a_jour_declaree, mise_a_jour_parse)
+    }
+}
