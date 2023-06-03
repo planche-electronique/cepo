@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use json::JsonValue;
+use json::JsonValue::{self ,Array};
 use std::fs;
 
 #[derive(Clone, PartialEq)]
@@ -63,7 +63,7 @@ impl Vol {
         vol.dump()
     }
 
-    pub fn from_json(json_parse: JsonValue) -> Self {
+    pub fn from_json(mut json_parse: JsonValue) -> Self {
         Vol {
             numero_ogn: json_parse["numero_ogn"].as_i32().unwrap(),
             code_decollage: json_parse["code_decollage"].take_string().unwrap(),
