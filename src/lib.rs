@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use json::JsonValue::Array;
+use json::JsonValue;
 use std::fs;
 
 #[derive(Clone, PartialEq)]
@@ -17,6 +17,36 @@ pub struct Vol {
 }
 
 impl Vol {
+    fn new() -> Self {
+        Vol {
+            numero_ogn: i32::default(),
+            code_decollage: String::default(),
+            machine_decollage: String::default(),
+            decolleur: String::default(),
+            aeronef: String::default(),
+            code_vol: String::default(),
+            pilote1: String::default(),
+            pilote2: String::default(),
+            decollage: NaiveTime::default(),
+            atterissage: NaiveTime::default(),
+        }
+    }
+    
+    fn default() -> Self {
+        Vol {
+            numero_ogn: 1,
+            code_decollage: String::from("T"),
+            machine_decollage: String::from("F-REMA"),
+            decolleur: String::from("YDL"),
+            aeronef: String::from("F-CERJ"),
+            code_vol: String::from("S"),
+            pilote1: String::from("Walt Disney"),
+            pilote2: String::default(),
+            decollage: NaiveTime::from_hms_opt(13, 0, 0).unwrap(),
+            atterissage: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
+        }
+    }
+    
     pub fn to_json(self: &Self) -> String {
         let vol = json::object! {
             numero_ogn: self.numero_ogn,
@@ -31,6 +61,21 @@ impl Vol {
             atterissage: *self.atterissage.format("%H:%M").to_string(),
         };
         vol.dump()
+    }
+
+    pub fn from_json(json_parse: JsonValue) -> Self {
+        Vol {
+            numero_ogn: json_parse["numero_ogn"].as_i32().unwrap(),
+            code_decollage: json_parse["code_decollage"].take_string().unwrap(),
+            machine_decollage: json_parse["machine_decollage"].take_string().unwrap(),
+            decolleur: json_parse["decolleur"].take_string().unwrap(),
+            aeronef: json_parse["aeronef"].take_string().unwrap(),
+            code_vol: json_parse["code_vol"].take_string().unwrap(),
+            pilote1: json_parse["pilote1"].take_string().unwrap(),
+            pilote2: json_parse["pilote2"].take_string().unwrap(),
+            decollage: NaiveTime::parse_from_str(json_parse["decollage"].take_string().unwrap().as_str(), "%H:%M").unwrap(),
+            atterissage: NaiveTime::parse_from_str(json_parse["atterissage"].take_string().unwrap().as_str(), "%H:%M").unwrap(),
+        }
     }
 }
 
@@ -117,10 +162,10 @@ impl MiseAJour {
         MiseAJour {
             numero_vol: u8::default(), //numero du vol **OGN**
             champ_mis_a_jour: String::default(),
-            nouvelle_valeur: String::default()
+            nouvelle_valeur: String::default(),
         }
     }
-    
+
     pub fn parse(self: &mut Self, texte_json: json::JsonValue) -> Result<(), String> {
         match texte_json {
             json::JsonValue::Object(objet) => {
@@ -158,19 +203,27 @@ pub fn mettre_a_jour(mut vols: Vec<Vol>, mise_a_jour: MiseAJour) {
     for mut vol in vols {
         if vol.numero_ogn == mise_a_jour.numero_vol as i32 {
             match mise_a_jour.champ_mis_a_jour.clone().as_str() {
-                "code_decollage"    => vol.code_decollage    = mise_a_jour.nouvelle_valeur.clone(),
-                "machine_decollage" => vol.machine_decollage = mise_a_jour.nouvelle_valeur.clone(), 
-                "decolleur"         => vol.decolleur         = mise_a_jour.nouvelle_valeur.clone(), 
-                "aeronef"           => vol.aeronef           = mise_a_jour.nouvelle_valeur.clone(), 
-                "code_vol"          => vol.code_vol          = mise_a_jour.nouvelle_valeur.clone(),
-                "pilote1"           => vol.pilote1           = mise_a_jour.nouvelle_valeur.clone(), 
-                "pilote2"           => vol.pilote2           = mise_a_jour.nouvelle_valeur.clone(), 
+                "code_decollage" => vol.code_decollage = mise_a_jour.nouvelle_valeur.clone(),
+                "machine_decollage" => vol.machine_decollage = mise_a_jour.nouvelle_valeur.clone(),
+                "decolleur" => vol.decolleur = mise_a_jour.nouvelle_valeur.clone(),
+                "aeronef" => vol.aeronef = mise_a_jour.nouvelle_valeur.clone(),
+                "code_vol" => vol.code_vol = mise_a_jour.nouvelle_valeur.clone(),
+                "pilote1" => vol.pilote1 = mise_a_jour.nouvelle_valeur.clone(),
+                "pilote2" => vol.pilote2 = mise_a_jour.nouvelle_valeur.clone(),
                 "decollage" => {
-                    vol.decollage = NaiveTime::parse_from_str(format!("{}", mise_a_jour.nouvelle_valeur.clone()).as_str(), "%Hh%M").unwrap();
-                },
+                    vol.decollage = NaiveTime::parse_from_str(
+                        format!("{}", mise_a_jour.nouvelle_valeur.clone()).as_str(),
+                        "%Hh%M",
+                    )
+                    .unwrap();
+                }
                 "atterissage" => {
-                    vol.atterissage = NaiveTime::parse_from_str(format!("{}", mise_a_jour.nouvelle_valeur.clone()).as_str(), "%Hh%M").unwrap();
-                },
+                    vol.atterissage = NaiveTime::parse_from_str(
+                        format!("{}", mise_a_jour.nouvelle_valeur.clone()).as_str(),
+                        "%Hh%M",
+                    )
+                    .unwrap();
+                }
                 _ => {
                     eprintln!("Requète de mise a jour mauvaise.");
                 }
