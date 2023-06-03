@@ -5,12 +5,12 @@ use std::thread;
 mod ogn;
 use chrono::{Datelike, Utc};
 use ogn::{thread_ogn, creer_chemin_jour};
-use serveur::{ajouter_requete, enlever_requete, mettre_a_jour, MiseAJour, Vol, nom_fichier_date};
+use serveur::{Client, VariationRequete, mettre_a_jour, MiseAJour, Vol, nom_fichier_date};
 use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
 
 fn main() {
-    let requetes_en_cours: Arc<Mutex<Vec<serveur::Client>>> = Arc::new(Mutex::new(Vec::new()));
+    let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
     let vols: Arc<Mutex<Vec<Vol>>> = Arc::new(Mutex::new(Vec::new()));
@@ -47,13 +47,13 @@ fn main() {
 
 fn gestion_connexion(
     mut flux: TcpStream,
-    requetes_en_cours: Arc<Mutex<Vec<serveur::Client>>>,
+    requetes_en_cours: Arc<Mutex<Vec<Client>>>,
     vols: Arc<Mutex<Vec<Vol>>>,
 ) {
     let adresse = format!("{}", (flux.peer_addr().unwrap()));
 
     let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
-    ajouter_requete(requetes_en_cours_lock.to_vec(), adresse.clone());
+    requetes_en_cours_lock.to_vec().incrementer(adresse.clone());
     drop(requetes_en_cours_lock);
 
     let mut tampon = [0; 16384];
@@ -139,7 +139,7 @@ fn gestion_connexion(
     flux.flush().unwrap();
 
     let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
-    enlever_requete(requetes_en_cours_lock.to_vec(), adresse);
+    requetes_en_cours_lock.to_vec().decrementer(adresse);
     drop(requetes_en_cours_lock);
 }
 

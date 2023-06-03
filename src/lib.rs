@@ -1,8 +1,12 @@
 use chrono::prelude::*;
 use json::JsonValue::Array;
 use std::fs;
+
 pub use crate::vol::Vol;
 mod vol;
+
+pub use crate::client::{VariationRequete, Client};
+mod client;
 
 
 pub struct Appareil {
@@ -36,46 +40,8 @@ pub fn liste_immatriculations() -> Vec<String> {
     immatriculations
 }
 
-pub fn ajouter_requete(mut requetes_en_cours: Vec<Client>, adresse: String) {
-    //println!("+1 connection : {}", adresse.clone());
-    let mut adresse_existe: bool = false;
-    for mut client in requetes_en_cours.clone() {
-        if client.adresse == adresse {
-            if client.requetes_en_cours < 10 {
-                client.requetes_en_cours += 1;
-                adresse_existe = true;
-            } else {
-                println!("pas plus de requêtes pour {}", adresse);
-            }
-        }
-        if adresse_existe == false {
-            requetes_en_cours.push(Client {
-                adresse: adresse.to_string(),
-                requetes_en_cours: 1,
-            });
-        }
-    }
-}
 
-pub fn enlever_requete(mut requetes_en_cours: Vec<Client>, adresse: String) {
-    //println!("-1 connection : {}", adresse.clone());
-    for mut client in requetes_en_cours.clone() {
-        if client.adresse == adresse {
-            if client.requetes_en_cours != 1 {
-                client.requetes_en_cours -= 1;
-            } else {
-                let index = requetes_en_cours.iter().position(|x| *x == client).unwrap();
-                requetes_en_cours.remove(index);
-            }
-        }
-    }
-}
 
-#[derive(Clone, PartialEq)]
-pub struct Client {
-    adresse: String,
-    requetes_en_cours: i32,
-}
 
 pub struct MiseAJour {
     numero_vol: u8,
