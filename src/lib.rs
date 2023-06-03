@@ -2,7 +2,7 @@ use chrono::prelude::*;
 use json::JsonValue::{self ,Array};
 use std::fs;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Vol {
     pub numero_ogn: i32,
     pub code_decollage: String,
