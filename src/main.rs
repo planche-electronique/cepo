@@ -14,8 +14,8 @@ fn main() {
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
     let vols: Arc<Mutex<Vec<Vol>>> = Arc::new(Mutex::new(Vec::new()));
-    let vols_lock = vols.lock().unwrap();
-    lire_vols_date((*vols_lock).clone(), 2023, 04, 25);
+    let mut vols_lock = vols.lock().unwrap();
+    *vols_lock = vols_enregistres_date(2023, 04, 25);
     drop(vols_lock);
 
     let vols_thread = vols.clone();
@@ -88,16 +88,19 @@ fn gestion_connexion(
             })
         })
     } else if nom_fichier == "vols" {
-
+        //on recupere la liste de vols
         let vols_lock = vols.lock().unwrap();
         let vols_vec = (*vols_lock).clone();
         drop(vols_lock);
+        
+        //on crée une string qui sera la json final et on lui rajoute le dbut d'un tableau
         let mut vols_str = String::new();
         vols_str.push_str("[\n");
+        
+        //pour chaque vol on ajoute sa version json a vols_str et on rajoute une virgule
         for vol in vols_vec {
             vols_str.push_str(vol.to_json().as_str());
             vols_str.push_str(",");
-            println!("{}", vol.to_json().as_str());
         }
         vols_str = vols_str[0..(vols_str.len() - 1)].to_string(); // on enleve la virgule de trop
         vols_str.push_str("\n]"); //on ferme
@@ -140,19 +143,20 @@ fn gestion_connexion(
     drop(requetes_en_cours_lock);
 }
 
-fn lire_vols_chemin(mut vols: Vec<Vol>, chemin_jour: String) {
+fn vols_enregistres_chemin(chemin_jour: String) -> Vec<Vol>{
     let fichiers_vols = fs::read_dir(format!("./dossier_de_travail/{}", chemin_jour)).unwrap();
-
+    let mut vols: Vec<Vol> = Vec::new();
+    
     for vol in fichiers_vols {
         let nom_fichier = vol.unwrap().path().to_str().unwrap().to_string();
-
         let fichier_vol_str = fs::read_to_string(format!("{}", nom_fichier)).unwrap();
         let vol_json_parse = Vol::from_json(json::parse(fichier_vol_str.as_str()).unwrap());
         vols.push(vol_json_parse);
     }
+    vols
 }
 
-fn lire_vols_date(vols: Vec<Vol>, annee: i32, mois: u32, jour: u32) {
+fn vols_enregistres_date(annee: i32, mois: u32, jour: u32) -> Vec<Vol>{
     let jour_str: String;
     if jour > 9 {
         jour_str = jour.to_string();
@@ -170,15 +174,16 @@ fn lire_vols_date(vols: Vec<Vol>, annee: i32, mois: u32, jour: u32) {
     creer_chemin_jour(annee.to_string(), mois_str.clone(), jour_str.clone());
     let chemin = format!("./{}/{}/{}", annee, mois_str, jour_str);
 
-    lire_vols_chemin(vols, chemin);
+    vols_enregistres_chemin(chemin)
+    
 }
 
-fn lire_vols_jour(vols: Vec<Vol>) {
+fn _vols_enregistres_jour() -> Vec<Vol> {
     let date_maintenant = Utc::now();
     let annee = date_maintenant.year();
     let mois = date_maintenant.month();
     let jour = date_maintenant.day();
-    lire_vols_date(vols, annee, mois, jour);
+    vols_enregistres_date(annee, mois, jour)
 }
 
 mod tests;
