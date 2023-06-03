@@ -1,5 +1,4 @@
 use chrono::prelude::*;
-use json::JsonValue::Array;
 use std::fs;
 
 pub use crate::vol::Vol;
@@ -19,29 +18,14 @@ pub fn liste_immatriculations() -> Vec<String> {
     let contenu_fichier = fs::read_to_string("./parametres/immatriculations.json")
         .expect("Probleme lors de la leture du fichier");
     let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
-    let immatriculations_json = match fichier_parse {
-        Array(vecteur) => vecteur,
-        _ => {
-            eprintln!("immatriculations.json n'est pas un tableau");
-            Vec::new()
-        }
-    };
+    let iter_fichier = fichier_parse.members();
     let mut immatriculations = Vec::new();
-    for immatriculation_json in immatriculations_json {
-        match immatriculation_json {
-            json::JsonValue::Short(immatriculation) => {
-                immatriculations.push(immatriculation.as_str().to_string());
-            }
-            _ => {
-                eprintln!("{} n'est pas de type short", immatriculation_json);
-            }
-        }
+    for valeur_json in iter_fichier {
+        immatriculations.push(valeur_json.as_str().unwrap().to_string());
     }
+
     immatriculations
 }
-
-
-
 
 pub struct MiseAJour {
     numero_vol: u8,
