@@ -1,5 +1,4 @@
 mod tests {
-    use chrono::NaiveTime;
 
     /*
     #[test]
@@ -14,6 +13,7 @@ mod tests {
     #[test]
     fn test_vol_from_json() {
         use crate::Vol;
+        use chrono::NaiveTime;
         
         let json_parse = json::parse("{\"numero_ogn\":1,\"aeronef\":\"F-CEAF\",\"decollage\":\"14h14\",\"atterissage\":\"14h19\"}").unwrap();
         
