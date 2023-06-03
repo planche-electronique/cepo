@@ -5,7 +5,7 @@ use std::thread;
 mod ogn;
 use chrono::{Datelike, Utc};
 use ogn::{thread_ogn, creer_chemin_jour};
-use serveur::{Client, VariationRequete, mettre_a_jour, MiseAJour, Vol, nom_fichier_date};
+use serveur::{Client, VariationRequete, MettreAJour, MiseAJour, Vol, nom_fichier_date};
 use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
 
@@ -117,8 +117,8 @@ fn gestion_connexion(
             .unwrap();
 
         let vols_lock = vols.lock().unwrap();
-        let vols_vec = (*vols_lock).clone();
-        mettre_a_jour(vols_vec, mise_a_jour);
+        let mut vols_vec = (*vols_lock).clone();
+        vols_vec.mettre_a_jour(mise_a_jour);
         drop(vols_lock);
 
         String::from("ok!")
