@@ -3,6 +3,7 @@ use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 mod ogn;
+use chrono::{NaiveDate, Datelike, Utc};
 use ogn::thread_ogn;
 use serveur::{ajouter_requete, enlever_requete, mettre_a_jour, MiseAJour, Vol};
 use simple_http_parser::request;
@@ -68,7 +69,7 @@ fn gestion_connexion(
     };
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
-    let contenu: String = if ((nom_fichier != "vols") && (nom_fichier != "miseajour")) {
+    let contenu: String = if (nom_fichier != "vols") && (nom_fichier != "miseajour") {
         if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string() == ".json".to_string()
         {
             headers.push_str(
@@ -138,7 +139,7 @@ fn gestion_connexion(
     drop(requetes_en_cours_lock);
 }
 
-fn lire_vols(mut vols: Vec<Vol>, chemin_jour: String) {
+fn lire_vols_chemin(vols: Vec<Vol>, chemin_jour: String) {
     let fichiers_vols = fs::read_dir(format!("./dossier_de_travail/{}", chemin_jour)).unwrap();
     let mut vols = Vec::new();
     
@@ -147,7 +148,19 @@ fn lire_vols(mut vols: Vec<Vol>, chemin_jour: String) {
         let vol_json_parse = Vol::from_json(json::parse(fichier_vol_str.as_str()).unwrap());
         vols.push(vol_json_parse);
     }
-    
+}
+
+fn lire_vols_date(vols: Vec<Vol>, annee: i32, mois: u32, jour: u32) {
+    let chemin = format!("./dossier_de_travail/{}/{}/{}", annee, mois, jour);
+    lire_vols_chemin(vols, chemin);
+}
+
+fn lire_vols_jour(vols: Vec<Vol>) {
+    let date_maintenant = Utc::now();
+    let annee = date_maintenant.year();
+    let mois = date_maintenant.month();
+    let jour = date_maintenant.day();
+    lire_vols_date(vols, annee, mois, jour);
 }
 
 mod tests;
