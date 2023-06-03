@@ -69,7 +69,8 @@ fn gestion_connexion(
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
     let contenu: String = if ((nom_fichier != "vols") && (nom_fichier != "miseajour")) {
-        if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string() == ".json".to_string() {
+        if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string() == ".json".to_string()
+        {
             headers.push_str(
                 "Content-Type: application/json\
                 \nAccess-Control-Allow-Origin: *",
@@ -135,6 +136,18 @@ fn gestion_connexion(
     let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
     enlever_requete(requetes_en_cours_lock.to_vec(), adresse);
     drop(requetes_en_cours_lock);
+}
+
+fn lire_vols(mut vols: Vec<Vol>, chemin_jour: String) {
+    let fichiers_vols = fs::read_dir(format!("./dossier_de_travail/{}", chemin_jour)).unwrap();
+    let mut vols = Vec::new();
+    
+    for vol in fichiers_vols {
+        let fichier_vol_str = fs::read_to_string(format!("./dossier_de_travail/{}/{}", chemin_jour, vol.unwrap().path().to_str().unwrap())).unwrap();
+        let vol_json_parse = Vol::from_json(json::parse(fichier_vol_str.as_str()).unwrap());
+        vols.push(vol_json_parse);
+    }
+    
 }
 
 mod tests;
