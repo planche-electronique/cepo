@@ -32,7 +32,7 @@ impl Vol {
         }
     }
     
-    fn _default() -> Self {
+    pub fn default() -> Self {
         Vol {
             numero_ogn: 1,
             code_decollage: String::from("T"),

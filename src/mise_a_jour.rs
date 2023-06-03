@@ -91,9 +91,11 @@ impl MettreAJour for Vec<Vol> {
 
 mod tests {
 
+
     #[test]
     fn mise_a_jour_parse_test() {
         use crate::MiseAJour;
+        
         let mise_a_jour_declaree = MiseAJour {
             numero_vol: 1,
             champ_mis_a_jour: String::from("code_vol"),
@@ -109,5 +111,37 @@ mod tests {
             }").unwrap());
         
         assert_eq!(mise_a_jour_declaree, mise_a_jour_parse)
+    }
+    
+    #[test]
+    fn mettre_a_jour_test() {
+        use crate::{MiseAJour, MettreAJour};
+        use crate::vol::Vol;
+        use chrono::NaiveTime;
+        
+        let mut vols = Vec::new();
+        vols.push(Vol::default());
+        
+        let mise_a_jour = MiseAJour {
+            numero_vol: 1,
+            champ_mis_a_jour: String::from("machine_decollage"),
+            nouvelle_valeur: String::from("LUCIFER")
+        };
+        
+        vols.mettre_a_jour(mise_a_jour);
+        
+        let vol_verif = Vol {
+            numero_ogn: 1,
+            code_decollage: String::from("T"),
+            machine_decollage: String::from("LUCIFER"),
+            decolleur: String::from("YDL"),
+            aeronef: String::from("F-CERJ"),
+            code_vol: String::from("S"),
+            pilote1: String::from("Walt Disney"),
+            pilote2: String::default(),
+            decollage: NaiveTime::from_hms_opt(13, 0, 0).unwrap(),
+            atterissage: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
+        };
+        assert_eq!(vols[0], vol_verif)
     }
 }
