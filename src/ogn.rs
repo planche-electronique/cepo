@@ -167,7 +167,7 @@ fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
     }
 }
 
-fn creer_chemin_jour(annee: String, mois: String, jour: String) {
+pub fn creer_chemin_jour(annee: String, mois: String, jour: String) {
     let chemins = fs::read_dir("./dossier_de_travail").unwrap();
     let mut annee_existe = false;
     for chemin in chemins {

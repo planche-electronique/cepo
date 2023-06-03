@@ -4,7 +4,7 @@ use std::net::{TcpListener, TcpStream};
 use std::thread;
 mod ogn;
 use chrono::{NaiveDate, Datelike, Utc};
-use ogn::thread_ogn;
+use ogn::{thread_ogn, creer_chemin_jour};
 use serveur::{ajouter_requete, enlever_requete, mettre_a_jour, MiseAJour, Vol};
 use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
@@ -14,6 +14,9 @@ fn main() {
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
     let vols: Arc<Mutex<Vec<Vol>>> = Arc::new(Mutex::new(Vec::new()));
+    let vols_lock = vols.lock().unwrap();
+    lire_vols_date((*vols_lock).clone(), 2023, 04, 05);
+    drop(vols_lock);
 
     let vols_thread = vols.clone();
 
@@ -90,7 +93,7 @@ fn gestion_connexion(
         let vols_vec = (*vols_lock).clone();
         drop(vols_lock);
         let mut vols_str = String::new();
-        vols_str.push_str("[");
+        vols_str.push_str("[\n");
         for vol in vols_vec {
             println!("1");
             vols_str.push_str(vol.to_json().as_str());
@@ -98,7 +101,7 @@ fn gestion_connexion(
             println!("{}", vol.to_json().as_str());
         }
         vols_str = vols_str[0..(vols_str.len() - 1)].to_string(); // on enleve la virgule de trop
-        vols_str.push_str("]"); //on ferme
+        vols_str.push_str("\n]"); //on ferme
         headers.push_str(
             "Content-Type: application/json\
             \nAccess-Control-Allow-Origin: *",
@@ -139,9 +142,8 @@ fn gestion_connexion(
     drop(requetes_en_cours_lock);
 }
 
-fn lire_vols_chemin(vols: Vec<Vol>, chemin_jour: String) {
+fn lire_vols_chemin(mut vols: Vec<Vol>, chemin_jour: String) {
     let fichiers_vols = fs::read_dir(format!("./dossier_de_travail/{}", chemin_jour)).unwrap();
-    let mut vols = Vec::new();
     
     for vol in fichiers_vols {
         let fichier_vol_str = fs::read_to_string(format!("./dossier_de_travail/{}/{}", chemin_jour, vol.unwrap().path().to_str().unwrap())).unwrap();
@@ -151,7 +153,9 @@ fn lire_vols_chemin(vols: Vec<Vol>, chemin_jour: String) {
 }
 
 fn lire_vols_date(vols: Vec<Vol>, annee: i32, mois: u32, jour: u32) {
-    let chemin = format!("./dossier_de_travail/{}/{}/{}", annee, mois, jour);
+    
+    creer_chemin_jour(annee.to_string(), mois.to_string(), jour.to_string());
+    let chemin = format!("./{}/{}/{}", annee, mois, jour);
     lire_vols_chemin(vols, chemin);
 }
 
