@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 pub trait VariationRequete {
     fn incrementer(&mut self, adresse: String);
     fn decrementer(&mut self, adresse: String);
@@ -45,4 +47,18 @@ impl VariationRequete for Vec<Client> {
         }
     }
     
+}
+
+impl VariationRequete for Arc<Mutex<Vec<Client>>> {
+    fn incrementer(&mut self, adresse: String) {
+        let requetes_en_cours_lock = self.lock().unwrap();
+        requetes_en_cours_lock.to_vec().incrementer(adresse.clone());
+        drop(requetes_en_cours_lock);
+    }
+    
+    fn decrementer(&mut self, adresse: String) {
+        let requetes_en_cours_lock = self.lock().unwrap();
+        requetes_en_cours_lock.to_vec().decrementer(adresse.clone());
+        drop(requetes_en_cours_lock);
+    }
 }

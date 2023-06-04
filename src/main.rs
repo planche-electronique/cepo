@@ -52,9 +52,7 @@ fn gestion_connexion(
 ) {
     let adresse = format!("{}", (flux.peer_addr().unwrap()));
 
-    let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
-    requetes_en_cours_lock.to_vec().incrementer(adresse.clone());
-    drop(requetes_en_cours_lock);
+    requetes_en_cours.clone().incrementer(adresse.clone());
 
     let mut tampon = [0; 16384];
     flux.read(&mut tampon).unwrap();
@@ -138,9 +136,7 @@ fn gestion_connexion(
     flux.write(reponse.as_bytes()).unwrap();
     flux.flush().unwrap();
 
-    let requetes_en_cours_lock = requetes_en_cours.lock().unwrap();
-    requetes_en_cours_lock.to_vec().decrementer(adresse);
-    drop(requetes_en_cours_lock);
+    requetes_en_cours.clone().decrementer(adresse);
 }
 
 fn vols_enregistres_chemin(chemin_jour: String) -> Vec<Vol>{
