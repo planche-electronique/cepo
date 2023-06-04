@@ -5,7 +5,7 @@ use std::thread;
 mod ogn;
 use chrono::{Datelike, Utc};
 use ogn::{thread_ogn, creer_chemin_jour};
-use serveur::{Client, VariationRequete, MettreAJour, MiseAJour, Vol, Json,  nom_fichier_date};
+use serveur::*;
 use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
 
@@ -68,8 +68,11 @@ fn gestion_connexion(
         "/vols.json" => "vols",
         string => string,
     };
+    
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
+    
+    
     let contenu: String = if (nom_fichier != "vols") && (nom_fichier != "miseajour") {
         if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string() == ".json".to_string()
         {

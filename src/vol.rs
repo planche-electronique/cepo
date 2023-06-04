@@ -79,12 +79,12 @@ impl Vol {
     }
 }
 
-pub trait Json {
+pub trait VolJson {
     fn vers_json(self) -> String;
     fn depuis_json(&mut self, json: JsonValue);
 }
 
-impl Json for Vec<Vol> {
+impl VolJson for Vec<Vol> {
     fn vers_json(self) -> String {
         //on crée une string qui sera la json final et on lui rajoute le dbut d'un tableau
         let mut vols_str = String::new();
@@ -106,5 +106,20 @@ impl Json for Vec<Vol> {
             vols.push(Vol::from_json(vol.clone()));
         }
         (*self) = vols;
+    }
+}
+
+mod tests {
+
+    #[test]
+    fn vec_vol_vers_json_test() {
+        use crate::vol::{Vol, VolJson};
+            
+        let vols = vec![Vol::default()];
+        let vols_str = vols.vers_json();
+        
+        assert_eq!(vols_str, String::from("[\n{\"numero_ogn\":1,\"code_decollage\":\"T\",\"machine_decollage\":\"F-REMA\",\"decolleur\":\"YDL\",\"aeronef\":\"F-CERJ\",\"code_vol\":\"S\",\"pilote1\":\"Walt Disney\",\"pilote2\":\"\",\"decollage\":\"13:00\",\"atterissage\":\"14:00\"}\n]"))
+        
+        
     }
 }
