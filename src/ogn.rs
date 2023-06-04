@@ -142,7 +142,7 @@ fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
 
     let mut vols_json = Vec::new();
     for vol in vols {
-        vols_json.push(vol.to_json());
+        vols_json.push(vol.vers_json());
     }
 
     let mut index = 1;

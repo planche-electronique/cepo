@@ -47,7 +47,7 @@ impl Vol {
         }
     }
     
-    pub fn to_json(self: &Self) -> String {
+    pub fn vers_json(self: &Self) -> String {
         let vol = json::object! {
             numero_ogn: self.numero_ogn,
             code_decollage: *self.code_decollage,
@@ -63,7 +63,7 @@ impl Vol {
         vol.dump()
     }
 
-    pub fn from_json(mut json_parse: JsonValue) -> Self {
+    pub fn depuis_json(mut json_parse: JsonValue) -> Self {
         Vol {
             numero_ogn: json_parse["numero_ogn"].as_i32().unwrap_or_default(),
             code_decollage: json_parse["code_decollage"].take_string().unwrap_or_else(||{String::from("")}),
@@ -92,7 +92,7 @@ impl VolJson for Vec<Vol> {
         
         //pour chaque vol on ajoute sa version json a vols_str et on rajoute une virgule
         for vol in self {
-            vols_str.push_str(vol.to_json().as_str());
+            vols_str.push_str(vol.vers_json().as_str());
             vols_str.push_str(",");
         }
         vols_str = vols_str[0..(vols_str.len() - 1)].to_string(); // on enleve la virgule de trop
@@ -103,7 +103,7 @@ impl VolJson for Vec<Vol> {
     fn depuis_json(&mut self, json: JsonValue) {
         let mut vols= Vec::new();
         for vol in json.members() {
-            vols.push(Vol::from_json(vol.clone()));
+            vols.push(Vol::depuis_json(vol.clone()));
         }
         (*self) = vols;
     }

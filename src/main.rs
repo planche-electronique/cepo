@@ -139,7 +139,7 @@ fn vols_enregistres_chemin(chemin_jour: String) -> Vec<Vol>{
     for vol in fichiers_vols {
         let nom_fichier = vol.unwrap().path().to_str().unwrap().to_string();
         let fichier_vol_str = fs::read_to_string(format!("{}", nom_fichier)).unwrap();
-        let vol_json_parse = Vol::from_json(json::parse(fichier_vol_str.as_str()).unwrap());
+        let vol_json_parse = Vol::depuis_json(json::parse(fichier_vol_str.as_str()).unwrap());
         vols.push(vol_json_parse);
     }
     vols

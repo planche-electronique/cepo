@@ -17,7 +17,7 @@ mod tests {
         
         let json_parse = json::parse("{\"numero_ogn\":1,\"aeronef\":\"F-CEAF\",\"decollage\":\"14h14\",\"atterissage\":\"14h19\"}").unwrap();
         
-        let vol_du_json = Vol::from_json(json_parse);
+        let vol_du_json = Vol::depuis_json(json_parse);
         
         let vrai_vol = Vol {
             numero_ogn: 1,
