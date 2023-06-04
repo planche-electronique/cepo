@@ -13,13 +13,11 @@ pub fn thread_ogn(vols: Arc<Mutex<Vec<Vol>>>) {
     drop(vols_lock);
     //on teste les égalités
     let nouveaux_vols = traitement_requete_ogn(requete_ogn(date));
-    println!("{}", nouveaux_vols.clone().vers_json());
     for nouveau_vol in nouveaux_vols.clone() {
         let mut existe = false; 
         for ancien_vol in &mut anciens_vols {
             if nouveau_vol.numero_ogn == ancien_vol.numero_ogn {
                 existe = true;
-                println!("meme vol : {}", ancien_vol.numero_ogn);
                 let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
                 if ancien_vol.decollage == heure_default {
                     (*ancien_vol).decollage = nouveau_vol.decollage;
@@ -35,9 +33,7 @@ pub fn thread_ogn(vols: Arc<Mutex<Vec<Vol>>>) {
     }
 
     let mut vols_lock = vols.lock().unwrap();
-    println!("{}", anciens_vols.clone().vers_json());
     *vols_lock = anciens_vols;
-    println!("{}", (*vols_lock).clone().vers_json());
     enregistrer_vols(vols_lock.to_vec(), date);
     drop(vols_lock);
     thread::sleep(time::Duration::from_millis(300000)); // 5 minutes
@@ -145,35 +141,32 @@ fn traitement_requete_ogn(requete: String) -> Vec<Vol> {
 }
 
 fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
-    println!("enregistrement");
     let annee = date.year();
     let mois = date.month();
     let jour = date.day();
+    
+    let jour_str = nom_fichier_date(jour as i32);
+    let mois_str= nom_fichier_date(mois as i32);
 
     creer_chemin_jour(annee, mois, jour);
 
     let mut vols_json = Vec::new();
     for vol in vols {
         vols_json.push(vol.vers_json());
-        println!("vols_json");
     }
 
     let mut index = 1;
     for vol_json in vols_json {
-        println!("enregistrement");
-        let index_str = if index > 9 {
-            index.to_string()
-        } else {
-            format!("0{}", index)
-        };
+        let index_str = nom_fichier_date(index);
         let chemin = format!(
             "./dossier_de_travail/{}/{}/{}/{}.json",
-            annee, mois, jour, index_str
+            annee, mois_str, jour_str, index_str
         );
         let fichier = fs::read_to_string(chemin.clone()).unwrap_or_else(|err| {
             println!(
-                "fichier numero {} introuvable ou non ouvrable : {}",
+                "fichier numero {} de chemiun {} introuvable ou non ouvrable : {}",
                 index,
+                chemin.clone(),
                 err.to_string()
             );
             "".to_string()
