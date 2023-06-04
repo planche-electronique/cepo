@@ -78,3 +78,33 @@ impl Vol {
         }
     }
 }
+
+pub trait Json {
+    fn vers_json(self) -> String;
+    fn depuis_json(&mut self, json: JsonValue);
+}
+
+impl Json for Vec<Vol> {
+    fn vers_json(self) -> String {
+        //on crée une string qui sera la json final et on lui rajoute le dbut d'un tableau
+        let mut vols_str = String::new();
+        vols_str.push_str("[\n");
+        
+        //pour chaque vol on ajoute sa version json a vols_str et on rajoute une virgule
+        for vol in self {
+            vols_str.push_str(vol.to_json().as_str());
+            vols_str.push_str(",");
+        }
+        vols_str = vols_str[0..(vols_str.len() - 1)].to_string(); // on enleve la virgule de trop
+        vols_str.push_str("\n]");
+        vols_str
+    }
+    
+    fn depuis_json(&mut self, json: JsonValue) {
+        let mut vols= Vec::new();
+        for vol in json.members() {
+            vols.push(Vol::from_json(vol.clone()));
+        }
+        (*self) = vols;
+    }
+}

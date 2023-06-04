@@ -5,7 +5,7 @@ use std::thread;
 mod ogn;
 use chrono::{Datelike, Utc};
 use ogn::{thread_ogn, creer_chemin_jour};
-use serveur::{Client, VariationRequete, MettreAJour, MiseAJour, Vol, nom_fichier_date};
+use serveur::{Client, VariationRequete, MettreAJour, MiseAJour, Vol, Json,  nom_fichier_date};
 use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
 
@@ -91,17 +91,7 @@ fn gestion_connexion(
         let vols_vec = (*vols_lock).clone();
         drop(vols_lock);
         
-        //on crée une string qui sera la json final et on lui rajoute le dbut d'un tableau
-        let mut vols_str = String::new();
-        vols_str.push_str("[\n");
-        
-        //pour chaque vol on ajoute sa version json a vols_str et on rajoute une virgule
-        for vol in vols_vec {
-            vols_str.push_str(vol.to_json().as_str());
-            vols_str.push_str(",");
-        }
-        vols_str = vols_str[0..(vols_str.len() - 1)].to_string(); // on enleve la virgule de trop
-        vols_str.push_str("\n]"); //on ferme
+        let vols_str = vols_vec.vers_json();
         headers.push_str(
             "Content-Type: application/json\
             \nAccess-Control-Allow-Origin: *",
