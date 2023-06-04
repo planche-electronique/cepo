@@ -73,8 +73,8 @@ impl Vol {
             code_vol: json_parse["code_vol"].take_string().unwrap_or_else(||{String::from("")}),
             pilote1: json_parse["pilote1"].take_string().unwrap_or_else(||{String::from("")}),
             pilote2: json_parse["pilote2"].take_string().unwrap_or_else(||{String::from("")}),
-            decollage: NaiveTime::parse_from_str(json_parse["decollage"].take_string().unwrap().as_str(), "%Hh%M").unwrap(),
-            atterissage: NaiveTime::parse_from_str(json_parse["atterissage"].take_string().unwrap().as_str(), "%Hh%M").unwrap(),
+            decollage: NaiveTime::parse_from_str(json_parse["decollage"].take_string().unwrap().as_str(), "%H:%M").unwrap(),
+            atterissage: NaiveTime::parse_from_str(json_parse["atterissage"].take_string().unwrap().as_str(), "%H:%M").unwrap(),
         }
     }
 }
