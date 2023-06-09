@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use json::JsonValue::Array;
-use serveur::{Appareil, Vol, nom_fichier_date, VolJson};
+use serveur::{Appareil, Vol, nom_fichier_date};
 use std::fs;
 use std::sync::{Arc, Mutex};
 use std::thread;

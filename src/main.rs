@@ -60,8 +60,8 @@ fn gestion_connexion(
     let requete_brute = String::from_utf8_lossy(&tampon).to_owned();
     let requete_parse = request::Request::from(&requete_brute).unwrap();
     let chemin = requete_parse.path;
-
-    let corps_json = requete_parse.body;
+    println!("{}", requete_parse.body);
+    let corps_json = requete_parse.body.clone();
     let nom_fichier = match chemin.as_str() {
         "/" => "./planche/example.html",
         "/vols" => "vols",
@@ -73,7 +73,7 @@ fn gestion_connexion(
     let mut headers = String::new();
     
     
-    let contenu: String = if (nom_fichier != "vols") && (nom_fichier != "miseajour") {
+    let contenu: String = if (nom_fichier != "vols") && (nom_fichier != "/mise_a_jour") {
         if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string() == ".json".to_string()
         {
             headers.push_str(
@@ -81,6 +81,7 @@ fn gestion_connexion(
                 \nAccess-Control-Allow-Origin: *",
             );
         }
+        println!("pas maj");
         fs::read_to_string(format!("./parametres{}", nom_fichier)).unwrap_or_else(|_| {
             ligne_statut = "HTTP/1.1 404 NOT FOUND";
             fs::read_to_string("./parametres/planche/404.html").unwrap_or_else(|err| {
@@ -97,22 +98,30 @@ fn gestion_connexion(
         let vols_str = vols_vec.vers_json();
         headers.push_str(
             "Content-Type: application/json\
+            \nAccess-Control-Allow-Headers: origin, content-type\
             \nAccess-Control-Allow-Origin: *",
         );
         vols_str
-    } else if nom_fichier == "miseajour" {
+    } else if nom_fichier == "/mise_a_jour" {
         // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
         let mut mise_a_jour = MiseAJour::new();
-        mise_a_jour
+        println!("{}", corps_json.as_str());
+        /*mise_a_jour
             .parse(json::parse(corps_json.as_str()).unwrap())
             .unwrap();
 
         let vols_lock = vols.lock().unwrap();
         let mut vols_vec = (*vols_lock).clone();
         vols_vec.mettre_a_jour(mise_a_jour);
-        drop(vols_lock);
+        drop(vols_lock);*/
+        ligne_statut = "HTTP/1.1 201 Created";
+        
+        headers.push_str(
+            "Content-Type: application/json\
+            \nAccess-Control-Allow-Origin: *",
+        );
 
-        String::from("ok!")
+        String::from("")
     } else {
         "".to_string()
     };
@@ -125,6 +134,7 @@ fn gestion_connexion(
         headers,
         contenu
     );
+    println!("{}", reponse);
 
     flux.write(reponse.as_bytes()).unwrap();
     flux.flush().unwrap();
