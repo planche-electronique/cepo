@@ -15,7 +15,7 @@ mod tests {
         use crate::Vol;
         use chrono::NaiveTime;
         
-        let json_parse = json::parse("{\"numero_ogn\":1,\"aeronef\":\"F-CEAF\",\"decollage\":\"14h14\",\"atterissage\":\"14h19\"}").unwrap();
+        let json_parse = json::parse("{\"numero_ogn\":1,\"aeronef\":\"F-CEAF\",\"decollage\":\"14:14\",\"atterissage\":\"14:19\"}").unwrap();
         
         let vol_du_json = Vol::depuis_json(json_parse);
         
@@ -31,7 +31,6 @@ mod tests {
             decollage: NaiveTime::from_hms_opt(14, 14, 0).unwrap(),
             atterissage: NaiveTime::from_hms_opt(14, 19, 0).unwrap(),
         };
-        
         assert_eq!(vrai_vol, vol_du_json)
         
     }
