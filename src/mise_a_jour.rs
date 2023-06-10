@@ -3,7 +3,7 @@ use crate::vol::Vol;
 
 #[derive(Debug, PartialEq)]
 pub struct MiseAJour {
-    numero_vol: u8,
+    numero_ogn: u8,
     champ_mis_a_jour: String,
     nouvelle_valeur: String,
 }
@@ -11,7 +11,7 @@ pub struct MiseAJour {
 impl MiseAJour {
     pub fn new() -> Self {
         MiseAJour {
-            numero_vol: u8::default(), //numero du vol **OGN**
+            numero_ogn: u8::default(), //numero du vol **OGN**
             champ_mis_a_jour: String::default(),
             nouvelle_valeur: String::default(),
         }
@@ -20,7 +20,7 @@ impl MiseAJour {
     pub fn parse(&mut self, texte_json: json::JsonValue) -> Result<(), String> {
         match texte_json {
             json::JsonValue::Object(objet) => {
-                self.numero_vol = objet["numero_ogn"].as_u8().unwrap_or_else(|| {
+                self.numero_ogn = objet["numero_ogn"].as_u8().unwrap_or_else(|| {
                     eprintln!("pas de numero de vol dans la requete");
                     0
                 });
@@ -58,7 +58,7 @@ impl MettreAJour for Vec<Vol> {
     // on crée une fonction pour mettre la mise à jour dans le vecteur Vols du jour
     fn mettre_a_jour(&mut self, mise_a_jour: MiseAJour) {
         for mut vol in self {
-            if vol.numero_ogn == mise_a_jour.numero_vol as i32 {
+            if vol.numero_ogn == mise_a_jour.numero_ogn as i32 {
                 match mise_a_jour.champ_mis_a_jour.clone().as_str() {
                     "code_decollage" => vol.code_decollage = mise_a_jour.nouvelle_valeur.clone(),
                     "machine_decollage" => vol.machine_decollage = mise_a_jour.nouvelle_valeur.clone(),
@@ -99,7 +99,7 @@ mod tests {
         use crate::MiseAJour;
         
         let mise_a_jour_declaree = MiseAJour {
-            numero_vol: 1,
+            numero_ogn: 1,
             champ_mis_a_jour: String::from("code_vol"),
             nouvelle_valeur: String::from("M")
         };
@@ -125,7 +125,7 @@ mod tests {
         vols.push(Vol::default());
         
         let mise_a_jour = MiseAJour {
-            numero_vol: 1,
+            numero_ogn: 1,
             champ_mis_a_jour: String::from("machine_decollage"),
             nouvelle_valeur: String::from("LUCIFER")
         };
