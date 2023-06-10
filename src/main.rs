@@ -120,30 +120,15 @@ fn gestion_connexion(
                     }
                     
                 }
-                //println!("{}", corps_json_str.len());
-                //println!("{} : {}", corps_json_str.len(), corps_json_str);
-                //println!("{}", &corps_json_str);
-                //let corps_json_maj = &corps_json_str[0..(corps_json_str.len()-10)];
-                //println!("{}", corps_json_str);
+
                 mise_a_jour
-                    .parse(json::parse(&corps_json_nettoye).unwrap_or_else(|err| {
-                        match err {
-                            json::Error::UnexpectedCharacter { ch, line, column } => {
-                                eprintln!("erreur: {} ; {} ; {} ; {}", err, ch, line, column);        
-                            },
-                            _ => {
-                                eprintln!("erreur: {}", err);
-                            }
-                        }
-                        
-                        json::JsonValue::Null
-                    }))
+                    .parse(json::parse(&corps_json_nettoye).unwrap())
                     .unwrap();
         
-                let vols_lock = vols.lock().unwrap();
-                let mut vols_vec = (*vols_lock).clone();
-                vols_vec.mettre_a_jour(mise_a_jour);
+                let mut vols_lock = vols.lock().unwrap();
+                (*vols_lock).mettre_a_jour(mise_a_jour);
                 drop(vols_lock);
+                
                 ligne_statut = "HTTP/1.1 201 Created";
                 
                 headers.push_str(

@@ -20,7 +20,7 @@ impl MiseAJour {
     pub fn parse(&mut self, texte_json: json::JsonValue) -> Result<(), String> {
         match texte_json {
             json::JsonValue::Object(objet) => {
-                self.numero_vol = objet["numero_vol"].as_u8().unwrap_or_else(|| {
+                self.numero_vol = objet["numero_ogn"].as_u8().unwrap_or_else(|| {
                     eprintln!("pas de numero de vol dans la requete");
                     0
                 });
@@ -40,6 +40,7 @@ impl MiseAJour {
                         ""
                     })
                     .to_string();
+                    
             }
             _ => {
                 eprintln!("pas un objet json");
@@ -86,6 +87,7 @@ impl MettreAJour for Vec<Vol> {
                 }
             }
         }
+        
     }            
 }
 
