@@ -60,7 +60,6 @@ fn gestion_connexion(
     let requete_brute = String::from_utf8_lossy(&tampon).to_owned();
     let requete_parse = request::Request::from(&requete_brute).unwrap();
     let chemin = requete_parse.path;
-    println!("{}", requete_parse.body);
     let corps_json = requete_parse.body.clone();
     let nom_fichier = match chemin.as_str() {
         "/" => "./planche/example.html",
@@ -73,59 +72,113 @@ fn gestion_connexion(
     let mut headers = String::new();
     
     
-    let contenu: String = if (nom_fichier != "vols") && (nom_fichier != "/mise_a_jour") {
-        if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string() == ".json".to_string()
-        {
-            headers.push_str(
-                "Content-Type: application/json\
-                \nAccess-Control-Allow-Origin: *",
-            );
-        }
-        println!("pas maj");
-        fs::read_to_string(format!("./parametres{}", nom_fichier)).unwrap_or_else(|_| {
-            ligne_statut = "HTTP/1.1 404 NOT FOUND";
-            fs::read_to_string("./parametres/planche/404.html").unwrap_or_else(|err| {
-                eprintln!("pas de 404.html !! : {}", err);
+    let contenu: String = match requete_parse.method {
+        
+        request::HTTPMethod::GET => {
+            if (nom_fichier != "vols") && (nom_fichier != "/mise_a_jour") {
+                if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string() == ".json".to_string()
+                {
+                    headers.push_str(
+                        "Content-Type: application/json\
+                        \nAccess-Control-Allow-Origin: *",
+                    );
+                }
+                fs::read_to_string(format!("./parametres{}", nom_fichier)).unwrap_or_else(|_| {
+                    ligne_statut = "HTTP/1.1 404 NOT FOUND";
+                    fs::read_to_string("./parametres/planche/404.html").unwrap_or_else(|err| {
+                        eprintln!("pas de 404.html !! : {}", err);
+                        "".to_string()
+                    })
+                })
+            } else if nom_fichier == "vols" {
+                //on recupere la liste de vols
+                let vols_lock = vols.lock().unwrap();
+                let vols_vec = (*vols_lock).clone();
+                drop(vols_lock);
+                
+                let vols_str = vols_vec.vers_json();
+                headers.push_str(
+                    "Content-Type: application/json\
+                    \nAccess-Control-Allow-Headers: origin, content-type\
+                    \nAccess-Control-Allow-Origin: *",
+                );
+                vols_str
+            } else {
                 "".to_string()
-            })
-        })
-    } else if nom_fichier == "vols" {
-        //on recupere la liste de vols
-        let vols_lock = vols.lock().unwrap();
-        let vols_vec = (*vols_lock).clone();
-        drop(vols_lock);
+            }
+        },
         
-        let vols_str = vols_vec.vers_json();
-        headers.push_str(
-            "Content-Type: application/json\
-            \nAccess-Control-Allow-Headers: origin, content-type\
-            \nAccess-Control-Allow-Origin: *",
-        );
-        vols_str
-    } else if nom_fichier == "/mise_a_jour" {
-        // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
-        let mut mise_a_jour = MiseAJour::new();
-        println!("{}", corps_json.as_str());
-        /*mise_a_jour
-            .parse(json::parse(corps_json.as_str()).unwrap())
-            .unwrap();
-
-        let vols_lock = vols.lock().unwrap();
-        let mut vols_vec = (*vols_lock).clone();
-        vols_vec.mettre_a_jour(mise_a_jour);
-        drop(vols_lock);*/
-        ligne_statut = "HTTP/1.1 201 Created";
+        request::HTTPMethod::POST => {
+            if nom_fichier == "/mise_a_jour" {
+                // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
+                let mut mise_a_jour = MiseAJour::new();
+                let mut corps_json_nettoye = String::new(); //necessite de creer une string qui va contenir 
+                //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
+                for char in corps_json.chars() {
+                    if char as u32 != 0 {
+                        corps_json_nettoye.push_str(char.to_string().as_str());
+                    }
+                    
+                }
+                //println!("{}", corps_json_str.len());
+                //println!("{} : {}", corps_json_str.len(), corps_json_str);
+                //println!("{}", &corps_json_str);
+                //let corps_json_maj = &corps_json_str[0..(corps_json_str.len()-10)];
+                //println!("{}", corps_json_str);
+                mise_a_jour
+                    .parse(json::parse(&corps_json_nettoye).unwrap_or_else(|err| {
+                        match err {
+                            json::Error::UnexpectedCharacter { ch, line, column } => {
+                                eprintln!("erreur: {} ; {} ; {} ; {}", err, ch, line, column);        
+                            },
+                            _ => {
+                                eprintln!("erreur: {}", err);
+                            }
+                        }
+                        
+                        json::JsonValue::Null
+                    }))
+                    .unwrap();
         
-        headers.push_str(
-            "Content-Type: application/json\
-            \nAccess-Control-Allow-Origin: *",
-        );
-
-        String::from("")
-    } else {
-        "".to_string()
+                let vols_lock = vols.lock().unwrap();
+                let mut vols_vec = (*vols_lock).clone();
+                vols_vec.mettre_a_jour(mise_a_jour);
+                drop(vols_lock);
+                ligne_statut = "HTTP/1.1 201 Created";
+                
+                headers.push_str(
+                    "Content-Type: application/json\
+                    \nAccess-Control-Allow-Origin: *",
+                );
+                
+                String::from("")
+            } else {
+                String::from("")
+            }
+        },
+        
+        request::HTTPMethod::OPTIONS => {
+            if nom_fichier == "/mise_a_jour" {
+                // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
+                ligne_statut = "HTTP/1.1 204 No Content";
+                
+                headers.push_str(
+                    "Connection: keep-alive\
+                    \nAccess-Control-Allow-Origin: *\
+                    \nAccess-Control-Max-Age: 86400\
+                    \nAccess-Control-Allow-Methods: POST, OPTIONS\
+                    \nAccess-Control-Allow-headers: origin,  content-type",
+                );
+        
+                String::from("")
+            } else {
+                String::from("")
+            }
+        },
+        _ => String::from("")
+        
     };
-
+    
     let reponse = format!(
         "{}\r\nContent-Length: {}\n\
         {}\r\n\r\n{}",
@@ -134,7 +187,6 @@ fn gestion_connexion(
         headers,
         contenu
     );
-    println!("{}", reponse);
 
     flux.write(reponse.as_bytes()).unwrap();
     flux.flush().unwrap();
