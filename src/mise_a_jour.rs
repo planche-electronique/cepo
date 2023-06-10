@@ -107,7 +107,7 @@ mod tests {
         let mut mise_a_jour_parse = MiseAJour::new();
         let _ = mise_a_jour_parse.parse(json::parse(" \
             { \
-                \"numero_vol\": 1, \
+                \"numero_ogn\": 1, \
                 \"champ_mis_a_jour\": \"code_vol\", \
                 \"nouvelle_valeur\": \"M\" \
             }").unwrap());
