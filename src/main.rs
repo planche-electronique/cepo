@@ -4,7 +4,7 @@ use std::net::{TcpListener, TcpStream};
 use std::thread;
 mod ogn;
 use chrono::{Datelike, Utc};
-use ogn::{thread_ogn, creer_chemin_jour};
+use ogn::{creer_chemin_jour, thread_ogn};
 use serveur::*;
 use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
@@ -14,7 +14,11 @@ fn main() {
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
     let vols: Arc<Mutex<Vec<Vol>>> = Arc::new(Mutex::new(Vec::new()));
-    let mut vols_lock = vols.lock().unwrap();
+    let mut vols_lock = vols
+        .try_lock()
+        .unwrap_or_else(|_| {
+           vols.try_lock().unwrap()
+        });
     *vols_lock = vols_enregistres_date(2023, 04, 25);
     drop(vols_lock);
 
@@ -67,16 +71,15 @@ fn gestion_connexion(
         "/vols.json" => "vols",
         string => string,
     };
-    
+
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
-    
-    
+
     let contenu: String = match requete_parse.method {
-        
         request::HTTPMethod::GET => {
             if (nom_fichier != "vols") && (nom_fichier != "/mise_a_jour") {
-                if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string() == ".json".to_string()
+                if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string()
+                    == ".json".to_string()
                 {
                     headers.push_str(
                         "Content-Type: application/json\
@@ -92,10 +95,10 @@ fn gestion_connexion(
                 })
             } else if nom_fichier == "vols" {
                 //on recupere la liste de vols
-                let vols_lock = vols.lock().unwrap();
+                let vols_lock = vols.try_lock().unwrap();
                 let vols_vec = (*vols_lock).clone();
                 drop(vols_lock);
-                
+
                 let vols_str = vols_vec.vers_json();
                 headers.push_str(
                     "Content-Type: application/json\
@@ -106,47 +109,46 @@ fn gestion_connexion(
             } else {
                 "".to_string()
             }
-        },
-        
+        }
+
         request::HTTPMethod::POST => {
             if nom_fichier == "/mise_a_jour" {
                 // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
                 let mut mise_a_jour = MiseAJour::new();
-                let mut corps_json_nettoye = String::new(); //necessite de creer une string qui va contenir 
-                //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
+                let mut corps_json_nettoye = String::new(); //necessite de creer une string qui va contenir
+                                                            //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
                 for char in corps_json.chars() {
                     if char as u32 != 0 {
                         corps_json_nettoye.push_str(char.to_string().as_str());
                     }
-                    
                 }
 
                 mise_a_jour
                     .parse(json::parse(&corps_json_nettoye).unwrap())
                     .unwrap();
-        
-                let mut vols_lock = vols.lock().unwrap();
+
+                let mut vols_lock = vols.try_lock().unwrap();
                 (*vols_lock).mettre_a_jour(mise_a_jour);
                 drop(vols_lock);
-                
+
                 ligne_statut = "HTTP/1.1 201 Created";
-                
+
                 headers.push_str(
                     "Content-Type: application/json\
                     \nAccess-Control-Allow-Origin: *",
                 );
-                
+
                 String::from("")
             } else {
                 String::from("")
             }
-        },
-        
+        }
+
         request::HTTPMethod::OPTIONS => {
             if nom_fichier == "/mise_a_jour" {
                 // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
                 ligne_statut = "HTTP/1.1 204 No Content";
-                
+
                 headers.push_str(
                     "Connection: keep-alive\
                     \nAccess-Control-Allow-Origin: *\
@@ -154,16 +156,15 @@ fn gestion_connexion(
                     \nAccess-Control-Allow-Methods: POST, OPTIONS\
                     \nAccess-Control-Allow-headers: origin,  content-type",
                 );
-        
+
                 String::from("")
             } else {
                 String::from("")
             }
-        },
-        _ => String::from("")
-        
+        }
+        _ => String::from(""),
     };
-    
+
     let reponse = format!(
         "{}\r\nContent-Length: {}\n\
         {}\r\n\r\n{}",
@@ -179,10 +180,10 @@ fn gestion_connexion(
     requetes_en_cours.clone().decrementer(adresse);
 }
 
-fn vols_enregistres_chemin(chemin_jour: String) -> Vec<Vol>{
+fn vols_enregistres_chemin(chemin_jour: String) -> Vec<Vol> {
     let fichiers_vols = fs::read_dir(format!("./dossier_de_travail/{}", chemin_jour)).unwrap();
     let mut vols: Vec<Vol> = Vec::new();
-    
+
     for vol in fichiers_vols {
         let nom_fichier = vol.unwrap().path().to_str().unwrap().to_string();
         let fichier_vol_str = fs::read_to_string(format!("{}", nom_fichier)).unwrap();
@@ -192,17 +193,15 @@ fn vols_enregistres_chemin(chemin_jour: String) -> Vec<Vol>{
     vols
 }
 
-fn vols_enregistres_date(annee: i32, mois: u32, jour: u32) -> Vec<Vol>{
-    
+fn vols_enregistres_date(annee: i32, mois: u32, jour: u32) -> Vec<Vol> {
     creer_chemin_jour(annee, mois, jour);
-    
+
     let jour_str = nom_fichier_date(jour as i32);
     let mois_str = nom_fichier_date(mois as i32);
-    
+
     let chemin = format!("./{}/{}/{}", annee, mois_str, jour_str);
 
     vols_enregistres_chemin(chemin)
-    
 }
 
 fn _vols_enregistres_jour() -> Vec<Vol> {
@@ -212,5 +211,15 @@ fn _vols_enregistres_jour() -> Vec<Vol> {
     let jour = date_maintenant.day();
     vols_enregistres_date(annee, mois, jour)
 }
+
+/* fn gerant_mutex_deja_utilise(vols: Arc<Mutex<Vec<Vol>>>) -> MutexGuard<'static, Vec<Vol>> {
+    let essai_vols_lock = MutexGuard::default();
+    while *essai_vols_lock == *(MutexGuard::default()) {
+        essai_vols_lock = vols
+            .try_lock()
+            .unwrap_or_else(|_| gerant_mutex_deja_utilise(vols));
+    }
+    essai_vols_lock
+}*/
 
 mod tests;
