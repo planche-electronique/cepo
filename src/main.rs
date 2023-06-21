@@ -3,8 +3,8 @@ use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 mod ogn;
-use chrono::{Datelike, Utc};
-use ogn::{creer_chemin_jour, thread_ogn};
+use chrono::{Datelike, NaiveDate, Utc};
+use ogn::{creer_chemin_jour, enregistrer_vols, thread_ogn};
 use serveur::*;
 use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
@@ -14,11 +14,7 @@ fn main() {
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
     let vols: Arc<Mutex<Vec<Vol>>> = Arc::new(Mutex::new(Vec::new()));
-    let mut vols_lock = vols
-        .try_lock()
-        .unwrap_or_else(|_| {
-           vols.try_lock().unwrap()
-        });
+    let mut vols_lock = vols.try_lock().unwrap_or_else(|_| vols.try_lock().unwrap());
     *vols_lock = vols_enregistres_date(2023, 04, 25);
     drop(vols_lock);
 
@@ -62,7 +58,8 @@ fn gestion_connexion(
     flux.read(&mut tampon).unwrap();
 
     let requete_brute = String::from_utf8_lossy(&tampon).to_owned();
-    let requete_parse = request::Request::from(&requete_brute).unwrap();
+    let requete_parse = request::Request::from(&requete_brute)
+        .expect("La requête n'a pas pu être parsé correctement.");
     let chemin = requete_parse.path;
     let corps_json = requete_parse.body.clone();
     let nom_fichier = match chemin.as_str() {
@@ -129,6 +126,10 @@ fn gestion_connexion(
 
                 let mut vols_lock = vols.try_lock().unwrap();
                 (*vols_lock).mettre_a_jour(mise_a_jour);
+                enregistrer_vols(
+                    (*vols_lock).clone(),
+                    NaiveDate::from_ymd_opt(2023, 04, 25).unwrap(),
+                );
                 drop(vols_lock);
 
                 ligne_statut = "HTTP/1.1 201 Created";

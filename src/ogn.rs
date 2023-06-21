@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use json::JsonValue::Array;
-use serveur::{Appareil, Vol, nom_fichier_date};
+use serveur::{nom_fichier_date, Appareil, Vol};
 use std::fs;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -14,7 +14,7 @@ pub fn thread_ogn(vols: Arc<Mutex<Vec<Vol>>>) {
     //on teste les égalités
     let nouveaux_vols = traitement_requete_ogn(requete_ogn(date));
     for nouveau_vol in nouveaux_vols.clone() {
-        let mut existe = false; 
+        let mut existe = false;
         for ancien_vol in &mut anciens_vols {
             if nouveau_vol.numero_ogn == ancien_vol.numero_ogn {
                 existe = true;
@@ -140,13 +140,13 @@ fn traitement_requete_ogn(requete: String) -> Vec<Vol> {
     vols
 }
 
-fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
+pub fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
     let annee = date.year();
     let mois = date.month();
     let jour = date.day();
-    
+
     let jour_str = nom_fichier_date(jour as i32);
-    let mois_str= nom_fichier_date(mois as i32);
+    let mois_str = nom_fichier_date(mois as i32);
 
     creer_chemin_jour(annee, mois, jour);
 
@@ -180,12 +180,9 @@ fn enregistrer_vols(vols: Vec<Vol>, date: NaiveDate) {
 }
 
 pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
-    
     let jour_str = nom_fichier_date(jour as i32);
     let mois_str = nom_fichier_date(mois as i32);
-    
-    
-    
+
     let chemins = fs::read_dir("./dossier_de_travail").unwrap();
     let mut annee_existe = false;
     for chemin in chemins {
@@ -214,11 +211,20 @@ pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
     let mut jour_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier == format!("./dossier_de_travail\\{}\\{}\\{}", annee, mois_str, jour_str) {
+        if chemin_dossier
+            == format!(
+                "./dossier_de_travail\\{}\\{}\\{}",
+                annee, mois_str, jour_str
+            )
+        {
             jour_existe = true;
         }
     }
     if jour_existe == false {
-        fs::create_dir(format!("./dossier_de_travail\\{}/{}/{}", annee, mois_str, jour_str)).unwrap();
+        fs::create_dir(format!(
+            "./dossier_de_travail\\{}/{}/{}",
+            annee, mois_str, jour_str
+        ))
+        .unwrap();
     }
 }
