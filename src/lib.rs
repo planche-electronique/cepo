@@ -2,7 +2,6 @@ use std::fs;
 
 pub mod client;
 pub mod ogn;
-pub mod pilotes;
 pub mod planche;
 pub mod vol;
 

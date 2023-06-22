@@ -1,8 +1,5 @@
-use crate::creer_chemin_jour;
-
-use crate::nom_fichier_date;
-use serveur::Vol;
-
+use crate::vol::Vol;
+use crate::{creer_chemin_jour, nom_fichier_date};
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use std::fs;
 
@@ -142,7 +139,7 @@ pub struct MiseAJour {
     numero_ogn: u8,
     champ_mis_a_jour: String,
     nouvelle_valeur: String,
-    date: NaiveDate,
+    pub date: NaiveDate,
 }
 
 impl MiseAJour {

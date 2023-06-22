@@ -4,18 +4,13 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-mod ogn;
-use ogn::thread_ogn;
-
-mod planche;
-use crate::planche::*;
-
-mod vol;
+use serveur::client::{Client, VariationRequete};
+use serveur::ogn::thread_ogn;
+use serveur::planche::{MiseAJour, Planche, MettreAJour};
+use serveur::vol::Vol;
+use serveur::nom_fichier_date;
 
 use chrono::{Datelike, NaiveDate, Utc};
-
-mod client;
-use client::{Client, VariationRequete};
 
 use serveur::creer_chemin_jour;
 use simple_http_parser::request;
@@ -60,7 +55,7 @@ fn main() {
 fn gestion_connexion(
     mut flux: TcpStream,
     requetes_en_cours: Arc<Mutex<Vec<Client>>>,
-    vols: Arc<Mutex<Vec<Vol>>>,
+    planche: Arc<Mutex<Planche>>,
 ) {
     let adresse = format!("{}", (flux.peer_addr().unwrap()));
 
@@ -76,8 +71,6 @@ fn gestion_connexion(
     let corps_json = requete_parse.body.clone();
     let nom_fichier = match chemin.as_str() {
         "/" => "./planche/example.html",
-        "/vols" => "vols",
-        "/vols.json" => "vols",
         string => string,
     };
 
@@ -86,7 +79,7 @@ fn gestion_connexion(
 
     let contenu: String = match requete_parse.method {
         request::HTTPMethod::GET => {
-            if (nom_fichier != "vols") && (nom_fichier != "/mise_a_jour") {
+            if &nom_fichier[1..5] != "vols" {
                 if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string()
                     == ".json".to_string()
                 {
@@ -102,19 +95,27 @@ fn gestion_connexion(
                         "".to_string()
                     })
                 })
-            } else if nom_fichier == "vols" {
-                //on recupere la liste de vols
-                let vols_lock = vols.try_lock().unwrap();
-                let vols_vec = (*vols_lock).clone();
-                drop(vols_lock);
-
-                let vols_str = vols_vec.vers_json();
+            } else if &(nom_fichier[0..5]) == "/vols" {
+                
                 headers.push_str(
                     "Content-Type: application/json\
                     \nAccess-Control-Allow-Headers: origin, content-type\
                     \nAccess-Control-Allow-Origin: *",
                 );
-                vols_str
+                let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
+                let date_str = &nom_fichier[5..16];
+                let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
+
+                if date != date_aujourdhui {
+                    return Planche::planche_du(date).vers_json();
+                } else {
+                    //on recupere la liste de planche
+                    let planche_lock = planche.lock().unwrap();
+                    let clone_planche = (*planche_lock).clone();
+                    drop(planche_lock);
+                    return clone_planche.vers_json();
+                }
+                
             } else {
                 "".to_string()
             }
@@ -135,14 +136,18 @@ fn gestion_connexion(
                 mise_a_jour
                     .parse(json::parse(&corps_json_nettoye).unwrap())
                     .unwrap();
-
-                let mut vols_lock = vols.try_lock().unwrap();
-                (*vols_lock).mettre_a_jour(mise_a_jour);
-                enregistrer_vols(
-                    (*vols_lock).clone(),
-                    NaiveDate::from_ymd_opt(2023, 04, 25).unwrap(),
-                );
-                drop(vols_lock);
+                let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
+                
+                if mise_a_jour.date != date_aujourdhui {
+                    let planche_voulue = Planche::planche_du(mise_a_jour.date);
+                    planche_voulue.mettre_a_jour(mise_a_jour);
+                    planche_voulue.enregistrer();
+                } else {
+                    let planche_lock = planche.lock().unwrap();
+                    (*planche_lock).mettre_a_jour(mise_a_jour);
+                    (*planche_lock).enregistrer();
+                    drop(planche_lock);
+                }
 
                 ligne_statut = "HTTP/1.1 201 Created";
 
@@ -224,15 +229,5 @@ fn _vols_enregistres_jour() -> Vec<Vol> {
     let jour = date_maintenant.day();
     vols_enregistres_date(annee, mois, jour)
 }
-
-/* fn gerant_mutex_deja_utilise(vols: Arc<Mutex<Vec<Vol>>>) -> MutexGuard<'static, Vec<Vol>> {
-    let essai_vols_lock = MutexGuard::default();
-    while *essai_vols_lock == *(MutexGuard::default()) {
-        essai_vols_lock = vols
-            .try_lock()
-            .unwrap_or_else(|_| gerant_mutex_deja_utilise(vols));
-    }
-    essai_vols_lock
-}*/
 
 mod tests;

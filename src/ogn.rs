@@ -1,6 +1,8 @@
+use crate::planche::Planche;
+use crate::vol::Vol;
+use crate::Appareil;
 use chrono::prelude::*;
 use json::JsonValue::Array;
-use serveur::{Appareil, Planche, Vol};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time;
@@ -33,7 +35,7 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
     }
 
     let mut planche_lock = planche.lock().unwrap();
-    *planche_lock = ancienne_planche;
+    *planche_lock = ancienne_planche.clone();
     drop(planche_lock);
     ancienne_planche.enregistrer();
     thread::sleep(time::Duration::from_millis(300000)); // 5 minutes
@@ -77,9 +79,9 @@ fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
             .to_string();
 
         let appareil_actuel = Appareil {
-            modele: modele,
-            categorie: categorie,
-            immatriculation: immatriculation,
+            modele,
+            categorie,
+            immatriculation,
         };
         appareils_ogn.push(appareil_actuel);
     }
@@ -128,7 +130,7 @@ fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
         });
         index += 1;
 
-        let immatriculations = serveur::liste_immatriculations();
+        let immatriculations = crate::liste_immatriculations();
         for vol in vols.clone() {
             if !(immatriculations.iter().any(|immat| *immat == vol.aeronef)) {
                 //si l'immat n'est pas dans la liste
