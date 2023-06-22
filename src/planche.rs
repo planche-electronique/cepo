@@ -1,4 +1,4 @@
-use crate::vol::Vol;
+use crate::vol::{Vol, VolJson};
 use crate::{creer_chemin_jour, nom_fichier_date};
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use std::fs;
@@ -35,9 +35,9 @@ impl Planche {
         Planche { vols, date }
     }
 
-    pub fn enregistrer(self) {
+    pub fn enregistrer(&self) {
         let date = self.date;
-        let vols = self.vols;
+        let vols = self.vols.clone();
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
@@ -81,6 +81,18 @@ impl Planche {
             vols: Vec::new(),
             date: NaiveDate::default(),
         }
+    }
+
+    pub fn vers_json(self) -> String {
+        let vols_json = self.vols.vers_json();
+        let date_json = self.date.format("%Y/%m/%d").to_string();
+        let mut json = String::new();
+        json.push_str("{ \"date\":");
+        json.push_str(&date_json);
+        json.push_str(", \"vols\" : ");
+        json.push_str(&vols_json);
+        json.push_str("}");
+        return json;
     }
 }
 

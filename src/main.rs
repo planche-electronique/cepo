@@ -5,10 +5,10 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use serveur::client::{Client, VariationRequete};
-use serveur::ogn::thread_ogn;
-use serveur::planche::{MiseAJour, Planche, MettreAJour};
-use serveur::vol::Vol;
 use serveur::nom_fichier_date;
+use serveur::ogn::thread_ogn;
+use serveur::planche::{MettreAJour, MiseAJour, Planche};
+use serveur::vol::Vol;
 
 use chrono::{Datelike, NaiveDate, Utc};
 
@@ -96,7 +96,6 @@ fn gestion_connexion(
                     })
                 })
             } else if &(nom_fichier[0..5]) == "/vols" {
-                
                 headers.push_str(
                     "Content-Type: application/json\
                     \nAccess-Control-Allow-Headers: origin, content-type\
@@ -107,15 +106,14 @@ fn gestion_connexion(
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
 
                 if date != date_aujourdhui {
-                    return Planche::planche_du(date).vers_json();
+                    Planche::planche_du(date).vers_json()
                 } else {
                     //on recupere la liste de planche
                     let planche_lock = planche.lock().unwrap();
                     let clone_planche = (*planche_lock).clone();
                     drop(planche_lock);
-                    return clone_planche.vers_json();
+                    clone_planche.vers_json()
                 }
-                
             } else {
                 "".to_string()
             }
@@ -137,13 +135,13 @@ fn gestion_connexion(
                     .parse(json::parse(&corps_json_nettoye).unwrap())
                     .unwrap();
                 let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
-                
+
                 if mise_a_jour.date != date_aujourdhui {
-                    let planche_voulue = Planche::planche_du(mise_a_jour.date);
+                    let mut planche_voulue = Planche::planche_du(mise_a_jour.date);
                     planche_voulue.mettre_a_jour(mise_a_jour);
                     planche_voulue.enregistrer();
                 } else {
-                    let planche_lock = planche.lock().unwrap();
+                    let mut planche_lock = planche.lock().unwrap();
                     (*planche_lock).mettre_a_jour(mise_a_jour);
                     (*planche_lock).enregistrer();
                     drop(planche_lock);
