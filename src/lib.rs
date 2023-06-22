@@ -1,7 +1,7 @@
 use std::fs;
 
 pub use crate::vol::{Vol, VolJson};
-mod vol;
+pub mod vol;
 
 pub use crate::client::{Client, VariationRequete};
 mod client;

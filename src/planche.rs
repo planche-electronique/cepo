@@ -1,5 +1,8 @@
 use crate::{creer_chemin_jour, nom_fichier_date};
-use chrono::NaiveDate;
+
+use crate::vol::Vol;
+
+use chrono::{Datelike, NaiveDate, NaiveTime};
 use std::fs;
 
 #[derive(PartialEq, Debug)]
@@ -133,9 +136,6 @@ impl MettreAJour for Planche {
     }
 }
 
-use crate::vol::Vol;
-use chrono::prelude::*;
-
 #[derive(Debug, PartialEq)]
 pub struct MiseAJour {
     numero_ogn: u8,
@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn mise_a_jour_parse_test() {
-        use crate::MiseAJour;
+        use crate::planche::MiseAJour;
         use chrono::NaiveDate;
         use core::panic;
 
@@ -230,8 +230,8 @@ mod tests {
 
     #[test]
     fn mettre_a_jour_test() {
+        use crate::planche::{MettreAJour, MiseAJour, Planche};
         use crate::vol::Vol;
-        use crate::{MettreAJour, MiseAJour, Planche};
         use chrono::{NaiveDate, NaiveTime};
 
         let mut vols = Vec::new();
@@ -275,7 +275,7 @@ mod tests {
         let vols_verif = vec![vol_verif];
         let planche_verif = Planche {
             vols: vols_verif,
-            date: date,
+            date,
         };
         assert_eq!(planche, planche_verif)
     }
