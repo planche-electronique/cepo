@@ -74,6 +74,13 @@ impl Planche {
             index += 1;
         }
     }
+
+    pub fn new() -> Self {
+        Planche {
+            vols: Vec::new(),
+            date: NaiveDate::default(),
+        }
+    }
 }
 
 pub trait MettreAJour {

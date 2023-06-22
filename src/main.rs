@@ -3,21 +3,26 @@ use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 mod ogn;
-use crate::creer_chemin_jour;
+mod planche;
 use chrono::{Datelike, NaiveDate, Utc};
-use ogn::{enregistrer_vols, thread_ogn};
+use ogn::thread_ogn;
+use planche::*;
+use serveur::creer_chemin_jour;
 use serveur::*;
 use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
 
 fn main() {
+    let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25);
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
-    let vols: Arc<Mutex<Vec<Vol>>> = Arc::new(Mutex::new(Vec::new()));
-    let mut vols_lock = vols.try_lock().unwrap_or_else(|_| vols.try_lock().unwrap());
-    *vols_lock = vols_enregistres_date(2023, 04, 25);
-    drop(vols_lock);
+    let planche: Planche = Arc::new(Mutex::new(Planche::new()));
+    let mut planche_lock = planche
+        .try_lock()
+        .unwrap_or_else(|_| vols.try_lock().unwrap());
+    *planche_lock = Planche::planche_du(date_aujourdhui);
+    drop(planche_lock);
 
     let vols_thread = vols.clone();
 
