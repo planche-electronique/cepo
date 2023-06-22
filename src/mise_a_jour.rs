@@ -1,11 +1,13 @@
 use crate::vol::Vol;
 use chrono::prelude::*;
+use chrono::NaiveDate;
 
 #[derive(Debug, PartialEq)]
 pub struct MiseAJour {
     numero_ogn: u8,
     champ_mis_a_jour: String,
     nouvelle_valeur: String,
+    date: NaiveDate,
 }
 
 impl MiseAJour {
@@ -14,6 +16,7 @@ impl MiseAJour {
             numero_ogn: u8::default(), //numero du vol **OGN**
             champ_mis_a_jour: String::default(),
             nouvelle_valeur: String::default(),
+            date: NaiveDate::default(),
         }
     }
 
@@ -40,6 +43,15 @@ impl MiseAJour {
                         ""
                     })
                     .to_string();
+
+                self.date = NaiveDate::parse_from_str(
+                    objet["date"].as_str().unwrap_or_else(|| {
+                        eprintln!("pas la bonne valeur pour la nouvelle valeur");
+                        ""
+                    }),
+                    "%Y/%m/%d",
+                )
+                .unwrap();
             }
             _ => {
                 eprintln!("pas un objet json");
@@ -96,24 +108,29 @@ mod tests {
     #[test]
     fn mise_a_jour_parse_test() {
         use crate::MiseAJour;
+        use chrono::NaiveDate;
+        use core::panic;
 
         let mise_a_jour_declaree = MiseAJour {
             numero_ogn: 1,
             champ_mis_a_jour: String::from("code_vol"),
             nouvelle_valeur: String::from("M"),
+            date: NaiveDate::from_ymd_opt(2023, 04, 25).unwrap(),
         };
 
         let mut mise_a_jour_parse = MiseAJour::new();
         let _ = mise_a_jour_parse.parse(
             json::parse(
-                " \
-            { \
-                \"numero_ogn\": 1, \
-                \"champ_mis_a_jour\": \"code_vol\", \
-                \"nouvelle_valeur\": \"M\" \
-            }",
+                "{ \
+                    \"numero_ogn\": 1, \
+                    \"champ_mis_a_jour\": \"code_vol\", \
+                    \"nouvelle_valeur\": \"M\", \
+                    \"date\":  \"2023/04/25\" \
+                }",
             )
-            .unwrap(),
+            .unwrap_or_else(|err| {
+                panic!("{} : erreur !!", err);
+            }),
         );
 
         assert_eq!(mise_a_jour_declaree, mise_a_jour_parse)
@@ -123,7 +140,7 @@ mod tests {
     fn mettre_a_jour_test() {
         use crate::vol::Vol;
         use crate::{MettreAJour, MiseAJour};
-        use chrono::NaiveTime;
+        use chrono::{NaiveDate, NaiveTime};
 
         let mut vols = Vec::new();
         vols.push(Vol::default());
@@ -132,6 +149,7 @@ mod tests {
             numero_ogn: 1,
             champ_mis_a_jour: String::from("machine_decollage"),
             nouvelle_valeur: String::from("LUCIFER"),
+            date: NaiveDate::from_ymd_opt(2023, 04, 25).unwrap(),
         };
 
         vols.mettre_a_jour(mise_a_jour);
