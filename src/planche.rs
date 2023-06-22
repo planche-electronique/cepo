@@ -1,14 +1,15 @@
-use crate::{creer_chemin_jour, nom_fichier_date};
+use crate::creer_chemin_jour;
 
-use crate::vol::Vol;
+use crate::nom_fichier_date;
+use serveur::Vol;
 
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use std::fs;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Planche {
-    vols: Vec<Vol>,
-    date: NaiveDate,
+    pub vols: Vec<Vol>,
+    pub date: NaiveDate,
 }
 
 impl Planche {

@@ -1,30 +1,36 @@
 use std::fs;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
-use std::thread;
-mod ogn;
-mod planche;
-use chrono::{Datelike, NaiveDate, Utc};
-use ogn::thread_ogn;
-use planche::*;
-use serveur::creer_chemin_jour;
-use serveur::*;
-use simple_http_parser::request;
 use std::sync::{Arc, Mutex};
+use std::thread;
+
+mod ogn;
+use ogn::thread_ogn;
+
+mod planche;
+use crate::planche::*;
+
+mod vol;
+
+use chrono::{Datelike, NaiveDate, Utc};
+
+mod client;
+use client::{Client, VariationRequete};
+
+use serveur::creer_chemin_jour;
+use simple_http_parser::request;
 
 fn main() {
-    let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25);
+    let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
-    let planche: Planche = Arc::new(Mutex::new(Planche::new()));
-    let mut planche_lock = planche
-        .try_lock()
-        .unwrap_or_else(|_| vols.try_lock().unwrap());
+    let planche_arc: Arc<Mutex<Planche>> = Arc::new(Mutex::new(Planche::new()));
+    let mut planche_lock = planche_arc.lock().unwrap();
     *planche_lock = Planche::planche_du(date_aujourdhui);
     drop(planche_lock);
 
-    let vols_thread = vols.clone();
+    let planche_thread = planche_arc.clone();
 
     // creation du dossier de travail si besoin
     let mut chemins = fs::read_dir("./").unwrap();
@@ -36,17 +42,17 @@ fn main() {
 
     //on spawn le thread qui va s'occuper de ogn
     thread::spawn(move || {
-        thread_ogn(vols_thread);
+        thread_ogn(planche_thread);
     });
 
     for flux in ecouteur.incoming() {
         let flux = flux.unwrap();
         let requetes_en_cours = requetes_en_cours.clone();
 
-        let vols = vols.clone();
+        let planche_arc = planche_arc.clone();
 
         thread::spawn(move || {
-            gestion_connexion(flux, requetes_en_cours, vols);
+            gestion_connexion(flux, requetes_en_cours, planche_arc);
         });
     }
 }

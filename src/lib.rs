@@ -1,13 +1,10 @@
 use std::fs;
 
-pub use crate::vol::{Vol, VolJson};
+pub mod client;
+pub mod ogn;
+pub mod pilotes;
+pub mod planche;
 pub mod vol;
-
-pub use crate::client::{Client, VariationRequete};
-mod client;
-
-pub use crate::planche::{MettreAJour, MiseAJour, Planche};
-mod planche;
 
 pub struct Appareil {
     pub modele: String,

@@ -1,20 +1,21 @@
 use chrono::prelude::*;
 use json::JsonValue::Array;
-use serveur::{Appareil, Vol};
+use serveur::{Appareil, Planche, Vol};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time;
 
-pub fn thread_ogn(vols: Arc<Mutex<Vec<Vol>>>) {
+pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
     let date = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
-    let vols_lock = vols.lock().unwrap();
-    let mut anciens_vols = (*vols_lock).clone();
-    drop(vols_lock);
-    //on teste les égalités
-    let nouveaux_vols = traitement_requete_ogn(requete_ogn(date));
-    for nouveau_vol in nouveaux_vols.clone() {
+    let planche_lock = planche.lock().unwrap();
+    let mut ancienne_planche = (*planche_lock).clone();
+    drop(planche_lock);
+    //on teste les égalités et on remplace si besoin
+    let requete = requete_ogn(date);
+    let nouvelle_planche = traitement_requete_ogn(requete, date);
+    for nouveau_vol in nouvelle_planche.vols.clone() {
         let mut existe = false;
-        for ancien_vol in &mut anciens_vols {
+        for ancien_vol in &mut ancienne_planche.vols {
             if nouveau_vol.numero_ogn == ancien_vol.numero_ogn {
                 existe = true;
                 let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
@@ -27,14 +28,14 @@ pub fn thread_ogn(vols: Arc<Mutex<Vec<Vol>>>) {
             }
         }
         if !existe {
-            anciens_vols.push(nouveau_vol);
+            ancienne_planche.vols.push(nouveau_vol);
         }
     }
 
-    let mut vols_lock = vols.lock().unwrap();
-    *vols_lock = anciens_vols;
-    enregistrer_vols(vols_lock.to_vec(), date);
-    drop(vols_lock);
+    let mut planche_lock = planche.lock().unwrap();
+    *planche_lock = ancienne_planche;
+    drop(planche_lock);
+    ancienne_planche.enregistrer();
     thread::sleep(time::Duration::from_millis(300000)); // 5 minutes
 }
 
@@ -50,7 +51,7 @@ pub fn requete_ogn(date: NaiveDate) -> String {
     corps
 }
 
-fn traitement_requete_ogn(requete: String) -> Vec<Vol> {
+fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
     let requete_parse = json::parse(requete.as_str()).unwrap();
     let devices = requete_parse["devices"].clone();
     let mut appareils_ogn: Vec<Appareil> = Vec::new();
@@ -122,8 +123,8 @@ fn traitement_requete_ogn(requete: String) -> Vec<Vol> {
             code_vol: "".to_string(),
             pilote1: "".to_string(),
             pilote2: "".to_string(),
-            decollage: decollage,
-            atterissage: atterissage,
+            decollage,
+            atterissage,
         });
         index += 1;
 
@@ -136,5 +137,5 @@ fn traitement_requete_ogn(requete: String) -> Vec<Vol> {
             }
         }
     }
-    vols
+    Planche { vols, date }
 }
