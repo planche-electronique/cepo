@@ -209,23 +209,4 @@ fn vols_enregistres_chemin(chemin_jour: String) -> Vec<Vol> {
     vols
 }
 
-fn vols_enregistres_date(annee: i32, mois: u32, jour: u32) -> Vec<Vol> {
-    creer_chemin_jour(annee, mois, jour);
-
-    let jour_str = nom_fichier_date(jour as i32);
-    let mois_str = nom_fichier_date(mois as i32);
-
-    let chemin = format!("./{}/{}/{}", annee, mois_str, jour_str);
-
-    vols_enregistres_chemin(chemin)
-}
-
-fn _vols_enregistres_jour() -> Vec<Vol> {
-    let date_maintenant = Utc::now();
-    let annee = date_maintenant.year();
-    let mois = date_maintenant.month();
-    let jour = date_maintenant.day();
-    vols_enregistres_date(annee, mois, jour)
-}
-
 mod tests;
