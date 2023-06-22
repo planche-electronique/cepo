@@ -5,14 +5,11 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use serveur::client::{Client, VariationRequete};
-use serveur::nom_fichier_date;
 use serveur::ogn::thread_ogn;
 use serveur::planche::{MettreAJour, MiseAJour, Planche};
-use serveur::vol::Vol;
 
-use chrono::{Datelike, NaiveDate, Utc};
+use chrono::NaiveDate;
 
-use serveur::creer_chemin_jour;
 use simple_http_parser::request;
 
 fn main() {
@@ -194,19 +191,6 @@ fn gestion_connexion(
     flux.flush().unwrap();
 
     requetes_en_cours.clone().decrementer(adresse);
-}
-
-fn vols_enregistres_chemin(chemin_jour: String) -> Vec<Vol> {
-    let fichiers_vols = fs::read_dir(format!("./dossier_de_travail/{}", chemin_jour)).unwrap();
-    let mut vols: Vec<Vol> = Vec::new();
-
-    for vol in fichiers_vols {
-        let nom_fichier = vol.unwrap().path().to_str().unwrap().to_string();
-        let fichier_vol_str = fs::read_to_string(format!("{}", nom_fichier)).unwrap();
-        let vol_json_parse = Vol::depuis_json(json::parse(fichier_vol_str.as_str()).unwrap());
-        vols.push(vol_json_parse);
-    }
-    vols
 }
 
 mod tests;
