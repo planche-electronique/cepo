@@ -91,7 +91,7 @@ fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
     let vols_json = match flights {
         Array(vols_json) => vols_json,
         _ => {
-            eprintln!("n'est pas un tableau");
+            eprintln!("La requete ogn n'a pas fourni un tableau.");
             Vec::new()
         }
     };
