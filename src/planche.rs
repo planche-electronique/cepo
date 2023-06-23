@@ -87,9 +87,9 @@ impl Planche {
         let vols_json = self.vols.vers_json();
         let date_json = self.date.format("%Y/%m/%d").to_string();
         let mut json = String::new();
-        json.push_str("{ \"date\":");
+        json.push_str("{ \"date\": \"");
         json.push_str(&date_json);
-        json.push_str(", \"vols\" : ");
+        json.push_str("\",\n\"vols\" : ");
         json.push_str(&vols_json);
         json.push_str("}");
         return json;
