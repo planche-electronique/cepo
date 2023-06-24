@@ -1,4 +1,5 @@
 use crate::vol::{Vol, VolJson};
+use crate::ogn::{requete_ogn, traitement_requete_ogn};
 use crate::{creer_chemin_jour, nom_fichier_date};
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use std::fs;
@@ -14,25 +15,14 @@ impl Planche {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
-
-        let mois_str = nom_fichier_date(mois as i32);
-        let jour_str = nom_fichier_date(jour as i32);
-
-        let mut vols: Vec<Vol> = Vec::new();
-
-        let fichiers = fs::read_dir(format!(
-            "./dossier_de_travail/{}/{}/{}",
-            annee, mois_str, jour_str
-        ))
-        .unwrap();
-
-        for fichier in fichiers {
-            let vol_json = fs::read_to_string(fichier.unwrap().path().to_str().unwrap()).unwrap();
-            let vol = Vol::depuis_json(json::parse(vol_json.as_str()).unwrap());
-            vols.push(vol);
-        }
-
-        Planche { vols, date }
+        
+        creer_chemin_jour(annee, mois, jour);
+        
+        //on récupère les données ud vol même s'il n'y a pas d'informations
+        let requete = requete_ogn(date);
+        let planche_du_jour = traitement_requete_ogn(requete, date);
+        planche_du_jour.enregistrer();
+        planche_du_jour
     }
 
     pub fn enregistrer(&self) {

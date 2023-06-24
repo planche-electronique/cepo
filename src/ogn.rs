@@ -53,7 +53,7 @@ pub fn requete_ogn(date: NaiveDate) -> String {
     corps
 }
 
-fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
+pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
     let requete_parse = json::parse(requete.as_str()).unwrap();
     let devices = requete_parse["devices"].clone();
     let mut appareils_ogn: Vec<Appareil> = Vec::new();
