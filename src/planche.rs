@@ -54,30 +54,28 @@ impl Planche {
 
         creer_chemin_jour(annee, mois, jour);
 
-        let mut vols_json = Vec::new();
-        for vol in vols {
-            vols_json.push(vol.vers_json());
-        }
-
         let mut index = 1;
-        for vol_json in vols_json {
+        for vol in vols {
             let index_str = nom_fichier_date(index);
             let chemin = format!(
                 "./dossier_de_travail/{}/{}/{}/{}.json",
                 annee, mois_str, jour_str, index_str
             );
-            let fichier = fs::read_to_string(chemin.clone()).unwrap_or_else(|err| {
-                println!(
-                    "fichier numero {} de chemin {} introuvable ou non ouvrable : {}\nProbabklement inexistant.",
-                    index,
-                    chemin.clone(),
-                    err.to_string()
-                );
-                "".to_string()
-            });
+            let mut fichier = String::new();
+            if std::path::Path::new(chemin.clone().as_str()).exists() {
+                fichier = fs::read_to_string(chemin.clone()).unwrap_or_else(|err| {
+                    println!(
+                        "fichier numero {} de chemin {} introuvable ou non ouvrable : {}",
+                        index,
+                        chemin.clone(),
+                        err.to_string()
+                    );
+                    "".to_string()
+                });
+            }
 
-            if fichier != vol_json {
-                fs::write(chemin, vol_json).expect("impossible d'ecrire le fichier");
+            if fichier != vol.vers_json() {
+                fs::write(chemin, vol.vers_json()).expect("impossible d'ecrire le fichier");
             }
             index += 1;
         }
