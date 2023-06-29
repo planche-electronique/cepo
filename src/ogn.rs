@@ -18,9 +18,12 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
     for nouveau_vol in nouvelle_planche.vols.clone() {
         let mut existe = false;
         for ancien_vol in &mut ancienne_planche.vols {
+            // si on est sur le meme vol
             if nouveau_vol.numero_ogn == ancien_vol.numero_ogn {
                 existe = true;
                 let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+                //teste les différentes valeurs qui peuvent être mises a jour
+                (*ancien_vol).code_vol = nouveau_vol.code_vol.clone();
                 if ancien_vol.decollage == heure_default {
                     (*ancien_vol).decollage = nouveau_vol.decollage;
                 }
@@ -104,7 +107,7 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
     };
     let mut index = 0;
     let immatriculations = crate::liste_immatriculations();
-    for vol_json in vols_json {
+    for vol_json in vols_json.clone() {
         index += 1;
 
         // on recupere tous les champs nécessaires
@@ -138,9 +141,9 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
         let code_decollage = if vol_json["tow"] == JsonValue::Null {
             "T"
         } else {
-            machine_decollage = appareils_ogn[vol_json["tow"].as_u8().unwrap() as usize]
-                .immatriculation
-                .clone();
+            let vol_remorqueur = vols_json[vol_json["tow"].clone().as_u8().unwrap() as usize].clone();
+            let numero_immat_remorqueur = vol_remorqueur["device"].as_u8().unwrap() as usize;
+            machine_decollage = appareils_ogn[numero_immat_remorqueur].immatriculation.clone();
             "R"
         }
         .to_string();
