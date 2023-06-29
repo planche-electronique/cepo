@@ -2,7 +2,7 @@ use crate::planche::Planche;
 use crate::vol::Vol;
 use crate::Appareil;
 use chrono::prelude::*;
-use json::JsonValue::Array;
+use json::JsonValue;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time;
@@ -55,10 +55,14 @@ pub fn requete_ogn(date: NaiveDate) -> String {
 
 pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
     let requete_parse = json::parse(requete.as_str()).unwrap();
+
+    /* ogn repere les aéronefs d'un jour en les listants et leur attribuant un id,
+    nous devons donc faire un lien entre l'immatriculation et le numero
+    d'un aeronef */
     let devices = requete_parse["devices"].clone();
     let mut appareils_ogn: Vec<Appareil> = Vec::new();
     let tableau_devices = match devices {
-        Array(appareils_json) => appareils_json,
+        JsonValue::Array(appareils_json) => appareils_json,
         _ => {
             eprintln!("devices n'est pas un tableau");
             Vec::new()
@@ -86,17 +90,35 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
         appareils_ogn.push(appareil_actuel);
     }
 
+    /* ic on s'occupe de lister les vols et d'attribuer les
+    immatriculations etc a chaque vol */
+
     let mut vols: Vec<Vol> = Vec::new();
     let flights = requete_parse["flights"].clone();
     let vols_json = match flights {
-        Array(vols_json) => vols_json,
+        JsonValue::Array(vols_json) => vols_json,
         _ => {
             eprintln!("La requete ogn n'a pas fourni un tableau.");
             Vec::new()
         }
     };
-    let mut index = 1;
+    let mut index = 0;
+    let immatriculations = crate::liste_immatriculations();
     for vol_json in vols_json {
+        index += 1;
+
+        // on recupere tous les champs nécessaires
+        let device = vol_json["device"].clone();
+        let device_number = device.as_u8().unwrap() as usize;
+        let immatriculation = appareils_ogn[device_number].immatriculation.clone();
+        if !(immatriculations
+            .iter()
+            .any(|immat| *immat == immatriculation.clone()))
+        {
+            //si l'immat n'est pas dans la liste, on ne la prend pas en compte
+            continue;
+        }
+        //decoollage
         let mut start_json = vol_json["start"].clone();
         let start_str = start_json
             .take_string()
@@ -104,22 +126,29 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
             .clone();
         let decollage =
             NaiveTime::parse_from_str(format!("{}", start_str).as_str(), "%Hh%M").unwrap();
-
+        //atterissage
         let stop_json = vol_json["stop"].clone();
         let stop_str = match stop_json {
             json::JsonValue::Short(short) => short.as_str().to_string(),
             _ => "00h00".to_string(),
         };
         let atterissage = NaiveTime::parse_from_str(stop_str.as_str(), "%Hh%M").unwrap();
-
-        let device = vol_json["device"].clone();
-        let device_number = device.as_u8().unwrap() as usize;
-        let immatriculation = appareils_ogn[device_number].immatriculation.clone();
+        //code_decollage
+        let mut machine_decollage = "".to_string();
+        let code_decollage = if vol_json["tow"] == JsonValue::Null {
+            "T"
+        } else {
+            machine_decollage = appareils_ogn[vol_json["tow"].as_u8().unwrap() as usize]
+                .immatriculation
+                .clone();
+            "R"
+        }
+        .to_string();
 
         vols.push(Vol {
             numero_ogn: index,
-            code_decollage: "".to_string(),
-            machine_decollage: "".to_string(),
+            code_decollage,
+            machine_decollage,
             decolleur: "".to_string(),
             aeronef: immatriculation,
             code_vol: "".to_string(),
@@ -128,16 +157,6 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
             decollage,
             atterissage,
         });
-        index += 1;
-
-        let immatriculations = crate::liste_immatriculations();
-        for vol in vols.clone() {
-            if !(immatriculations.iter().any(|immat| *immat == vol.aeronef)) {
-                //si l'immat n'est pas dans la liste
-                let index = vols.iter().position(|x| *x == vol).unwrap();
-                vols.remove(index); // on l'enleve
-            }
-        }
     }
     Planche { vols, date }
 }
