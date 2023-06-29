@@ -7,6 +7,7 @@ use std::thread;
 use serveur::client::{Client, VariationRequete};
 use serveur::ogn::thread_ogn;
 use serveur::planche::{MettreAJour, MiseAJour, Planche};
+use serveur::vol::VolJson;
 
 use chrono::NaiveDate;
 
@@ -103,13 +104,13 @@ fn gestion_connexion(
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
 
                 if date != date_aujourdhui {
-                    Planche::planche_du(date).vers_json()
+                    Planche::planche_du(date).vols.vers_json()
                 } else {
                     //on recupere la liste de planche
                     let planche_lock = planche.lock().unwrap();
                     let clone_planche = (*planche_lock).clone();
                     drop(planche_lock);
-                    clone_planche.vers_json()
+                    clone_planche.vols.vers_json()
                 }
             } else {
                 "".to_string()
