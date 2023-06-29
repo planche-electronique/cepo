@@ -23,7 +23,6 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
                 existe = true;
                 let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
                 //teste les différentes valeurs qui peuvent être mises a jour
-                (*ancien_vol).code_vol = nouveau_vol.code_vol.clone();
                 if ancien_vol.decollage == heure_default {
                     (*ancien_vol).decollage = nouveau_vol.decollage;
                 }
@@ -141,9 +140,12 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
         let code_decollage = if vol_json["tow"] == JsonValue::Null {
             "T"
         } else {
-            let vol_remorqueur = vols_json[vol_json["tow"].clone().as_u8().unwrap() as usize].clone();
+            let vol_remorqueur =
+                vols_json[vol_json["tow"].clone().as_u8().unwrap() as usize].clone();
             let numero_immat_remorqueur = vol_remorqueur["device"].as_u8().unwrap() as usize;
-            machine_decollage = appareils_ogn[numero_immat_remorqueur].immatriculation.clone();
+            machine_decollage = appareils_ogn[numero_immat_remorqueur]
+                .immatriculation
+                .clone();
             "R"
         }
         .to_string();
