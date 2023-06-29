@@ -11,17 +11,18 @@ pub struct Appareil {
     pub immatriculation: String,
 }
 
-pub fn liste_immatriculations() -> Vec<String> {
-    let contenu_fichier = fs::read_to_string("./parametres/immatriculations.json")
-        .expect("Probleme lors de la leture du fichier");
+pub fn paramtres_liste_depuis_json(fichier: &str) -> Vec<String> {
+    let contenu_fichier = fs::read_to_string(format!("./parametres/{}", fichier)).expect(format!(
+        "Probleme lors de la leture du fichier : {}",
+        fichier
+    ).as_str());
     let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
     let iter_fichier = fichier_parse.members();
-    let mut immatriculations = Vec::new();
+    let mut elements = Vec::new();
     for valeur_json in iter_fichier {
-        immatriculations.push(valeur_json.as_str().unwrap().to_string());
+        elements.push(valeur_json.as_str().unwrap().to_string());
     }
-
-    immatriculations
+    elements
 }
 
 pub fn nom_fichier_date(nombre: i32) -> String {
