@@ -34,9 +34,11 @@ fn main() {
     }
 
     //on spawn le thread qui va s'occuper de ogn
-    thread::spawn(move || {
-        thread_ogn(planche_thread);
-    });
+    let _ = thread::Builder::new()
+        .name("Thread OGN".to_string())
+        .spawn(move || {
+            thread_ogn(planche_thread);
+        });
 
     for flux in ecouteur.incoming() {
         let flux = flux.unwrap();
@@ -44,9 +46,11 @@ fn main() {
 
         let planche_arc = planche_arc.clone();
 
-        thread::spawn(move || {
-            gestion_connexion(flux, requetes_en_cours, planche_arc);
-        });
+        let _ = thread::Builder::new()
+            .name("Gestion".to_string())
+            .spawn(move || {
+                gestion_connexion(flux, requetes_en_cours, planche_arc);
+            });
     }
 }
 
