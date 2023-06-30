@@ -14,45 +14,58 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
     drop(planche_lock);
     //on teste les égalités et on remplace si besoin
     let requete = requete_ogn(date);
-    let nouvelle_planche = traitement_requete_ogn(requete, date);
-    for nouveau_vol in nouvelle_planche.vols.clone() {
-        let mut existe = false;
-        for ancien_vol in &mut ancienne_planche.vols {
-            // si on est sur le meme vol
-            if nouveau_vol.numero_ogn == ancien_vol.numero_ogn {
-                existe = true;
-                let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
-                //teste les différentes valeurs qui peuvent être mises a jour
-                if ancien_vol.decollage == heure_default {
-                    (*ancien_vol).decollage = nouveau_vol.decollage;
+    match requete {
+        Ok(requete_developpee) => {
+            let nouvelle_planche = traitement_requete_ogn(requete_developpee, date);
+            for nouveau_vol in nouvelle_planche.vols.clone() {
+                let mut existe = false;
+                for ancien_vol in &mut ancienne_planche.vols {
+                    // si on est sur le meme vol
+                    if nouveau_vol.numero_ogn == ancien_vol.numero_ogn {
+                        existe = true;
+                        let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+                        //teste les différentes valeurs qui peuvent être mises a jour
+                        if ancien_vol.decollage == heure_default {
+                            (*ancien_vol).decollage = nouveau_vol.decollage;
+                        }
+                        if ancien_vol.atterissage == heure_default {
+                            (*ancien_vol).atterissage = nouveau_vol.atterissage;
+                        }
+                    }
                 }
-                if ancien_vol.atterissage == heure_default {
-                    (*ancien_vol).atterissage = nouveau_vol.atterissage;
+                if !existe {
+                    ancienne_planche.vols.push(nouveau_vol);
                 }
             }
+
+            let mut planche_lock = planche.lock().unwrap();
+            *planche_lock = ancienne_planche.clone();
+            drop(planche_lock);
+            ancienne_planche.enregistrer();
+            // 5 minutes
+            thread::sleep(time::Duration::from_millis(300000));
         }
-        if !existe {
-            ancienne_planche.vols.push(nouveau_vol);
+        Err(_) => {
+            println!("Impossible de se connecter àl'A.P.I. de O.G.N. Veuillez vérifier votre connection internet.");
+            thread::sleep(time::Duration::from_millis(30000));
         }
     }
-
-    let mut planche_lock = planche.lock().unwrap();
-    *planche_lock = ancienne_planche.clone();
-    drop(planche_lock);
-    ancienne_planche.enregistrer();
-    thread::sleep(time::Duration::from_millis(300000)); // 5 minutes
 }
 
-pub fn requete_ogn(date: NaiveDate) -> String {
+pub fn requete_ogn(date: NaiveDate) -> Result<String, reqwest::Error> {
     let airfield_code = "LFLE";
     let reponse = reqwest::blocking::get(format!(
         "http://flightbook.glidernet.org/api/logbook/{}/{}",
         airfield_code,
         date.format("%Y-%m-%d").to_string()
-    ))
-    .unwrap();
-    let corps = reponse.text().unwrap();
-    corps
+    ));
+    match reponse {
+        Ok(reponse_developpee) => {
+            let corps = reponse_developpee.text().unwrap();
+            Ok(corps)
+        }
+        Err(erreur) => Err(erreur),
+    }
 }
 
 pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
