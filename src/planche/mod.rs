@@ -67,7 +67,15 @@ impl Planche {
             let vol = Vol::depuis_json(json::parse(vol_json.as_str()).unwrap());
             vols.push(vol);
         }
-        Planche { date, vols }
+        Planche {
+            date,
+            vols,
+            pilote_tr: String::new(),
+            treuil: String::new(),
+            pilote_rq: String::new(),
+            remorqueur: String::new(),
+            chef_piste: String::new(),
+        }
     }
 
     pub fn enregistrer(&self) {
@@ -120,17 +128,32 @@ impl Planche {
         Planche {
             vols: Vec::new(),
             date: NaiveDate::default(),
+            pilote_tr: String::new(),
+            treuil: String::new(),
+            pilote_rq: String::new(),
+            remorqueur: String::new(),
+            chef_piste: String::new(),
         }
     }
 
     pub fn vers_json(self) -> String {
         let vols_json = self.vols.vers_json();
         let date_json = self.date.format("%Y/%m/%d").to_string();
+        let reste_json = json::stringify(json::object! {
+            pilote_tr: self.pilote_tr,
+            treuil: self.treuil,
+            pilote_rq: self.pilote_rq,
+            remorqueur: self.remorqueur,
+            chef_piste: self.chef_piste,
+        });
         let mut json = String::new();
         json.push_str("{ \"date\": \"");
         json.push_str(&date_json);
         json.push_str("\",\n\"vols\" : ");
         json.push_str(&vols_json);
+        json.push_str(", \n ");
+        json.push_str(&reste_json);
+        json.push_str("\n");
         json.push_str("}");
         return json;
     }
@@ -260,7 +283,15 @@ mod tests {
             heure: NaiveTime::default(),
         };
 
-        let mut planche = Planche { vols, date };
+        let mut planche = Planche {
+            vols,
+            date,
+            pilote_tr: String::new(),
+            treuil: String::new(),
+            pilote_rq: String::new(),
+            remorqueur: String::new(),
+            chef_piste: String::new(),
+        };
         planche.mettre_a_jour(mise_a_jour);
 
         let vol_verif = Vol {
@@ -279,6 +310,11 @@ mod tests {
         let planche_verif = Planche {
             vols: vols_verif,
             date,
+            pilote_tr: String::new(),
+            treuil: String::new(),
+            pilote_rq: String::new(),
+            remorqueur: String::new(),
+            chef_piste: String::new(),
         };
         assert_eq!(planche, planche_verif)
     }
