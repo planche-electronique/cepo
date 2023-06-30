@@ -3,6 +3,7 @@ use crate::vol::Vol;
 use crate::Appareil;
 use chrono::prelude::*;
 use json::JsonValue;
+use log;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time;
@@ -46,7 +47,7 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
             thread::sleep(time::Duration::from_millis(300000));
         }
         Err(_) => {
-            println!("Impossible de se connecter àl'A.P.I. de O.G.N. Veuillez vérifier votre connection internet.");
+            log::warn!("Impossible de se connecter àl'A.P.I. de O.G.N. Veuillez vérifier votre connection internet.");
             thread::sleep(time::Duration::from_millis(30000));
         }
     }
@@ -54,6 +55,11 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
 
 pub fn requete_ogn(date: NaiveDate) -> Result<String, reqwest::Error> {
     let airfield_code = "LFLE";
+    log::info!(
+        "Requete à http://flightbook.glidernet.org/api/logbook/{}/{}",
+        airfield_code,
+        date.format("%Y-%m-%d").to_string()
+    );
     let reponse = reqwest::blocking::get(format!(
         "http://flightbook.glidernet.org/api/logbook/{}/{}",
         airfield_code,
@@ -70,6 +76,7 @@ pub fn requete_ogn(date: NaiveDate) -> Result<String, reqwest::Error> {
 
 pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
     let requete_parse = json::parse(requete.as_str()).unwrap();
+    log::info!("Traitement de la requete.");
 
     /* ogn repere les aéronefs d'un jour en les listants et leur attribuant un id,
     nous devons donc faire un lien entre l'immatriculation et le numero

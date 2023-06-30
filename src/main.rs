@@ -10,10 +10,13 @@ use serveur::planche::{MettreAJour, MiseAJour, Planche};
 use serveur::vol::VolJson;
 
 use chrono::NaiveDate;
-
+use env_logger;
+use log;
 use simple_http_parser::request;
 
 fn main() {
+    env_logger::init();
+    log::info!("Démarrage...");
     let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
@@ -33,10 +36,13 @@ fn main() {
         fs::create_dir(format!("./dossier_de_travail")).unwrap();
     }
 
+    log::info!("Serveur démarré.");
+
     //on spawn le thread qui va s'occuper de ogn
     let _ = thread::Builder::new()
         .name("Thread OGN".to_string())
         .spawn(move || {
+            log::info!("Lancement du thread qui s'occupe des requetes OGN automatiquement.");
             thread_ogn(planche_thread);
         });
 
@@ -93,7 +99,7 @@ fn gestion_connexion(
                 fs::read_to_string(format!("./parametres{}", nom_fichier)).unwrap_or_else(|_| {
                     ligne_statut = "HTTP/1.1 404 NOT FOUND";
                     fs::read_to_string("./parametres/planche/404.html").unwrap_or_else(|err| {
-                        eprintln!("pas de 404.html !! : {}", err);
+                        log::info!("pas de 404.html !! : {}", err);
                         "".to_string()
                     })
                 })
