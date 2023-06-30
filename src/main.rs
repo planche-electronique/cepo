@@ -7,7 +7,8 @@ use std::thread;
 
 use serveur::client::{Client, VariationRequete};
 use serveur::ogn::thread_ogn;
-use serveur::planche::{MettreAJour, MiseAJour, MiseAJourJson, Planche};
+use serveur::planche::mise_a_jour::{MiseAJour, MiseAJourJson};
+use serveur::planche::{MettreAJour, Planche};
 use serveur::vol::VolJson;
 
 use chrono::NaiveDate;
