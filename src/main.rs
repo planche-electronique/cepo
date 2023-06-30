@@ -99,7 +99,7 @@ fn gestion_connexion(
                 fs::read_to_string(format!("./parametres{}", nom_fichier)).unwrap_or_else(|_| {
                     ligne_statut = "HTTP/1.1 404 NOT FOUND";
                     fs::read_to_string("./parametres/planche/404.html").unwrap_or_else(|err| {
-                        eprintln!("pas de 404.html !! : {}", err);
+                        log::info!("pas de 404.html !! : {}", err);
                         "".to_string()
                     })
                 })

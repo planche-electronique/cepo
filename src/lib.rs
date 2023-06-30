@@ -36,9 +36,9 @@ pub fn nom_fichier_date(nombre: i32) -> String {
 }
 
 pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
-    log::info!("Création du chemin {}/{}/{}", annee, mois, jour);
     let jour_str = nom_fichier_date(jour as i32);
     let mois_str = nom_fichier_date(mois as i32);
+    log::info!("Création du chemin {}/{}/{}", annee, mois_str, jour_str);
 
     let chemins = fs::read_dir("./dossier_de_travail").unwrap();
     let mut annee_existe = false;
