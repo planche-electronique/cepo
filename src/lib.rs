@@ -44,42 +44,37 @@ pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
     let mut annee_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier == format!("./dossier_de_travail\\{}", annee) {
+        if chemin_dossier == format!("./dossier_de_travail/{}", annee) {
             annee_existe = true;
         }
     }
     if annee_existe == false {
-        fs::create_dir(format!("./dossier_de_travail\\{}", annee)).unwrap();
+        fs::create_dir(format!("./dossier_de_travail/{}", annee)).unwrap();
     }
 
-    let chemins = fs::read_dir(format!("./dossier_de_travail\\{}", annee)).unwrap();
+    let chemins = fs::read_dir(format!("./dossier_de_travail/{}", annee)).unwrap();
     let mut mois_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier == format!("./dossier_de_travail\\{}\\{}", annee, mois_str) {
+        if chemin_dossier == format!("./dossier_de_travail/{}/{}", annee, mois_str) {
             mois_existe = true;
         }
     }
     if mois_existe == false {
-        fs::create_dir(format!("./dossier_de_travail\\{}\\{}", annee, mois_str)).unwrap();
+        fs::create_dir(format!("./dossier_de_travail/{}/{}", annee, mois_str)).unwrap();
     }
 
-    let chemins = fs::read_dir(format!("./dossier_de_travail\\{}\\{}", annee, mois_str)).unwrap();
+    let chemins = fs::read_dir(format!("./dossier_de_travail/{}/{}", annee, mois_str)).unwrap();
     let mut jour_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier
-            == format!(
-                "./dossier_de_travail\\{}\\{}\\{}",
-                annee, mois_str, jour_str
-            )
-        {
+        if chemin_dossier == format!("./dossier_de_travail/{}/{}/{}", annee, mois_str, jour_str) {
             jour_existe = true;
         }
     }
     if jour_existe == false {
         fs::create_dir(format!(
-            "./dossier_de_travail\\{}/{}/{}",
+            "./dossier_de_travail/{}/{}/{}",
             annee, mois_str, jour_str
         ))
         .unwrap();
