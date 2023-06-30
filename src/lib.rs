@@ -44,7 +44,7 @@ pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
     let mut annee_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier == format!("./dossier_de_travail/{}", annee) {
+        if chemin_dossier[21..25] == annee.to_string() {
             annee_existe = true;
         }
     }
@@ -56,7 +56,7 @@ pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
     let mut mois_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier == format!("./dossier_de_travail/{}/{}", annee, mois_str) {
+        if chemin_dossier[26..28] == mois_str {
             mois_existe = true;
         }
     }
@@ -68,7 +68,7 @@ pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
     let mut jour_existe = false;
     for chemin in chemins {
         let chemin_dossier = chemin.unwrap().path().to_str().unwrap().to_string();
-        if chemin_dossier == format!("./dossier_de_travail/{}/{}/{}", annee, mois_str, jour_str) {
+        if chemin_dossier[29..31] == jour_str {
             jour_existe = true;
         }
     }

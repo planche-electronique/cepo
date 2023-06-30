@@ -10,10 +10,12 @@ use serveur::planche::{MettreAJour, MiseAJour, Planche};
 use serveur::vol::VolJson;
 
 use chrono::NaiveDate;
+use env_logger;
 use log;
 use simple_http_parser::request;
 
 fn main() {
+    env_logger::init();
     log::info!("Démarrage...");
     let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
