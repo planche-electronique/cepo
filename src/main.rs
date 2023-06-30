@@ -7,7 +7,8 @@ use std::thread;
 
 use serveur::client::{Client, VariationRequete};
 use serveur::ogn::thread_ogn;
-use serveur::planche::{MettreAJour, MiseAJour, Planche};
+use serveur::planche::mise_a_jour::{MiseAJour, MiseAJourJson, MiseAJourObsoletes};
+use serveur::planche::{MettreAJour, Planche};
 use serveur::vol::VolJson;
 
 use chrono::NaiveDate;
@@ -34,6 +35,8 @@ fn main() {
     *planche_lock = Planche::planche_du(date_aujourdhui);
     drop(planche_lock);
 
+    let majs_arc: Arc<Mutex<Vec<MiseAJour>>> = Arc::new(Mutex::new(Vec::new()));
+
     let planche_thread = planche_arc.clone();
 
     log::info!("Serveur démarré.");
@@ -51,11 +54,12 @@ fn main() {
         let requetes_en_cours = requetes_en_cours.clone();
 
         let planche_arc = planche_arc.clone();
+        let majs_arc = majs_arc.clone();
 
         let _ = thread::Builder::new()
             .name("Gestion".to_string())
             .spawn(move || {
-                gestion_connexion(flux, requetes_en_cours, planche_arc);
+                gestion_connexion(flux, requetes_en_cours, planche_arc, majs_arc);
             });
     }
 }
@@ -64,6 +68,7 @@ fn gestion_connexion(
     mut flux: TcpStream,
     requetes_en_cours: Arc<Mutex<Vec<Client>>>,
     planche: Arc<Mutex<Planche>>,
+    majs_arc: Arc<Mutex<Vec<MiseAJour>>>,
 ) {
     let adresse = format!("{}", (flux.peer_addr().unwrap()));
 
@@ -77,38 +82,41 @@ fn gestion_connexion(
         .expect("La requête n'a pas pu être parsé correctement.");
     let chemin = requete_parse.path;
     let corps_json = requete_parse.body.clone();
-    let mut nom_fichier = String::from("../site/");
-    nom_fichier.push_str(chemin.as_str());
+    let mut nom_fichier = chemin.to_string();
+
+    if nom_fichier == String::from("/") {
+        nom_fichier = String::from("/index.html");
+    }
+    nom_fichier.insert_str(0, "../site");
+    println!("{}", nom_fichier);
 
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
 
+    let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
+
     let contenu: String = match requete_parse.method {
         request::HTTPMethod::GET => {
-            if &nom_fichier[9..13] != "vols" {
-                if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string()
-                    == ".json".to_string()
-                {
-                    headers.push_str(
-                        "Content-Type: application/json\
-                        \nAccess-Control-Allow-Origin: *",
-                    );
-                }
-                fs::read_to_string(format!("{}", nom_fichier)).unwrap_or_else(|_| {
-                    ligne_statut = "HTTP/1.1 404 NOT FOUND";
-                    fs::read_to_string("../site/404.html").unwrap_or_else(|err| {
-                        log::info!("pas de 404.html !! : {}", err);
-                        "".to_string()
-                    })
-                })
-            } else if &(nom_fichier[8..13]) == "/vols" {
+            //fichier de majs            
+            if nom_fichier == "../site/majs".to_string() {
                 headers.push_str(
                     "Content-Type: application/json\
                     \nAccess-Control-Allow-Headers: origin, content-type\
                     \nAccess-Control-Allow-Origin: *",
                 );
-                let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
-                let date_str = &nom_fichier[5..16];
+                let mut majs_lock = majs_arc.lock().unwrap();
+                let majs = (*majs_lock).clone();
+                (*majs_lock).enlever_majs_obsoletes(chrono::Duration::minutes(5));
+                drop(majs_lock);
+                majs.vers_json()
+            // fichier de vols "émulé"
+            } else if &(nom_fichier[8..12]) == "vols" {
+                headers.push_str(
+                    "Content-Type: application/json\
+                    \nAccess-Control-Allow-Headers: origin, content-type\
+                    \nAccess-Control-Allow-Origin: *",
+                );
+                let date_str = &nom_fichier[12..23];
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
 
                 if date != date_aujourdhui {
@@ -120,6 +128,31 @@ fn gestion_connexion(
                     drop(planche_lock);
                     clone_planche.vols.vers_json()
                 }
+            //fichier de vols "émulé"
+            } else if &nom_fichier[8..12] != "vols" {
+                if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string()
+                    == ".json".to_string()
+                {
+                    headers.push_str(
+                        "Content-Type: application/json\
+                        \nAccess-Control-Allow-Origin: *",
+                    );
+                } else if nom_fichier[nom_fichier.len() - 3..nom_fichier.len()].to_string()
+                    == ".js".to_string()
+                {
+                    headers.push_str(
+                        "Content-Type: application/javascript\
+                        \nAccess-Control-Allow-Origin: *",
+                    );
+                }
+                fs::read_to_string(format!("../site/{}", nom_fichier)).unwrap_or_else(|_| {
+                    ligne_statut = "HTTP/1.1 404 NOT FOUND";
+                    fs::read_to_string("../site/404.html").unwrap_or_else(|err| {
+                        log::info!("pas de 404.html !! : {}", err);
+                        "".to_string()
+                    })
+                })
+             
             } else {
                 "".to_string()
             }
@@ -141,6 +174,10 @@ fn gestion_connexion(
                     .parse(json::parse(&corps_json_nettoye).unwrap())
                     .unwrap();
                 let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
+                // On ajoute la mise a jour au vecteur de mises a jour
+                let mut majs_lock = majs_arc.lock().unwrap();
+                (*majs_lock).push(mise_a_jour.clone());
+                drop(majs_lock);
 
                 if mise_a_jour.date != date_aujourdhui {
                     let mut planche_voulue = Planche::planche_du(mise_a_jour.date);

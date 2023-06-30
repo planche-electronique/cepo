@@ -1,8 +1,11 @@
+pub mod mise_a_jour;
+
 use crate::ogn::{requete_ogn, traitement_requete_ogn};
 use crate::vol::{Vol, VolJson};
 use crate::{creer_chemin_jour, nom_fichier_date};
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use log;
+pub use mise_a_jour::MiseAJour;
 use std::fs;
 
 #[derive(PartialEq, Debug, Clone)]
@@ -175,65 +178,6 @@ impl MettreAJour for Planche {
             }
         }
         self.vols = vols.clone();
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct MiseAJour {
-    numero_ogn: u8,
-    champ_mis_a_jour: String,
-    nouvelle_valeur: String,
-    pub date: NaiveDate,
-}
-
-impl MiseAJour {
-    pub fn new() -> Self {
-        MiseAJour {
-            numero_ogn: u8::default(), //numero du vol **OGN**
-            champ_mis_a_jour: String::default(),
-            nouvelle_valeur: String::default(),
-            date: NaiveDate::default(),
-        }
-    }
-
-    pub fn parse(&mut self, texte_json: json::JsonValue) -> Result<(), String> {
-        match texte_json {
-            json::JsonValue::Object(objet) => {
-                self.numero_ogn = objet["numero_ogn"].as_u8().unwrap_or_else(|| {
-                    log::error!("pas de numero de vol dans la requete");
-                    0
-                });
-
-                self.champ_mis_a_jour = objet["champ_mis_a_jour"]
-                    .as_str()
-                    .unwrap_or_else(|| {
-                        log::error!("pas le bon champ pour la nouvelle valeur");
-                        ""
-                    })
-                    .to_string();
-
-                self.nouvelle_valeur = objet["nouvelle_valeur"]
-                    .as_str()
-                    .unwrap_or_else(|| {
-                        log::error!("pas la bonne valeur pour la nouvelle valeur");
-                        ""
-                    })
-                    .to_string();
-
-                self.date = NaiveDate::parse_from_str(
-                    objet["date"].as_str().unwrap_or_else(|| {
-                        log::error!("pas la bonne valeur pour la nouvelle valeur");
-                        ""
-                    }),
-                    "%Y/%m/%d",
-                )
-                .unwrap();
-            }
-            _ => {
-                eprintln!("pas un objet json");
-            }
-        };
-        Ok(())
     }
 }
 
