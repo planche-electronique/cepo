@@ -28,11 +28,13 @@ fn main() {
         fs::create_dir(format!("../site/dossier_de_travail")).unwrap();
         log::info!("Dossier de travail créé.");
     }
-
+    /// planche_arc est une lanche caché derrière un arc, permet d'enregistrer les vols du jour
     let planche_arc: Arc<Mutex<Planche>> = Arc::new(Mutex::new(Planche::new()));
     let mut planche_lock = planche_arc.lock().unwrap();
     *planche_lock = Planche::planche_du(date_aujourdhui);
     drop(planche_lock);
+    /// majs_arc est un vecteur de mises a jour qui serotn envoyées aux planches en faisant la requete, évitant de tout renvoyer à chaque fois
+    let majs_arc: Arc<Mutex<Vec<MiseAJour>>> = Arc::new(Mutex::new(Vec::new)));
 
     let planche_thread = planche_arc.clone();
 
@@ -51,6 +53,7 @@ fn main() {
         let requetes_en_cours = requetes_en_cours.clone();
 
         let planche_arc = planche_arc.clone();
+        let majs_arc = majs_arc.clone();
 
         let _ = thread::Builder::new()
             .name("Gestion".to_string())
