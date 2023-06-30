@@ -97,7 +97,8 @@ fn gestion_connexion(
 
     let contenu: String = match requete_parse.method {
         request::HTTPMethod::GET => {
-            if &nom_fichier[4..8] != "vols" {
+            if &nom_fichier[8..12] != "vols" {
+                println!("!vol");
                 if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string()
                     == ".json".to_string()
                 {
@@ -120,13 +121,14 @@ fn gestion_connexion(
                         "".to_string()
                     })
                 })
-            } else if &(nom_fichier[4..8]) == "vols" {
+            } else if &(nom_fichier[8..12]) == "vols" {
+                println!("vols");
                 headers.push_str(
                     "Content-Type: application/json\
                     \nAccess-Control-Allow-Headers: origin, content-type\
                     \nAccess-Control-Allow-Origin: *",
                 );
-                let date_str = &nom_fichier[5..16];
+                let date_str = &nom_fichier[12..23];
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
 
                 if date != date_aujourdhui {
