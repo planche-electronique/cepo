@@ -88,7 +88,11 @@ fn gestion_connexion(
         nom_fichier = String::from("/index.html");
     }
     nom_fichier.insert_str(0, "../site");
-    println!("{}", nom_fichier);
+    log::info!(
+        "Requete du fichier {} de {}",
+        nom_fichier.clone(),
+        adresse.clone()
+    );
 
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
@@ -97,7 +101,7 @@ fn gestion_connexion(
 
     let contenu: String = match requete_parse.method {
         request::HTTPMethod::GET => {
-            //fichier de majs            
+            //fichier de majs
             if nom_fichier == "../site/majs".to_string() {
                 headers.push_str(
                     "Content-Type: application/json\
@@ -152,7 +156,6 @@ fn gestion_connexion(
                         "".to_string()
                     })
                 })
-             
             } else {
                 "".to_string()
             }
