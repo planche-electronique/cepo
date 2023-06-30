@@ -54,6 +54,11 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
 
 pub fn requete_ogn(date: NaiveDate) -> Result<String, reqwest::Error> {
     let airfield_code = "LFLE";
+    log::info!(
+        "Requete à http://flightbook.glidernet.org/api/logbook/{}/{}",
+        airfield_code,
+        date.format("%Y-%m-%d").to_string()
+    );
     let reponse = reqwest::blocking::get(format!(
         "http://flightbook.glidernet.org/api/logbook/{}/{}",
         airfield_code,
@@ -70,6 +75,7 @@ pub fn requete_ogn(date: NaiveDate) -> Result<String, reqwest::Error> {
 
 pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
     let requete_parse = json::parse(requete.as_str()).unwrap();
+    log::info!("Traitement de la requete {}", requete.clone());
 
     /* ogn repere les aéronefs d'un jour en les listants et leur attribuant un id,
     nous devons donc faire un lien entre l'immatriculation et le numero
