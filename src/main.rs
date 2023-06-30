@@ -14,7 +14,7 @@ use log;
 use simple_http_parser::request;
 
 fn main() {
-    log::info!("Démarrage...")
+    log::info!("Démarrage...");
     let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
@@ -33,6 +33,8 @@ fn main() {
     })) {
         fs::create_dir(format!("./dossier_de_travail")).unwrap();
     }
+
+    log::info!("Serveur démarré.");
 
     //on spawn le thread qui va s'occuper de ogn
     let _ = thread::Builder::new()
