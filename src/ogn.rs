@@ -125,7 +125,7 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
         }
     };
     let mut index = 0;
-    let immatriculations = crate::paramtres_liste_depuis_json("immatriculations.json");
+    let immatriculations = crate::parametres_liste_depuis_json("immatriculations.json");
     for vol_json in vols_json.clone() {
         index += 1;
 

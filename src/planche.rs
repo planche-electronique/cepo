@@ -50,7 +50,7 @@ impl Planche {
         let mut vols: Vec<Vol> = Vec::new();
 
         let fichiers = fs::read_dir(format!(
-            "./dossier_de_travail/{}/{}/{}",
+            "../site/dossier_de_travail/{}/{}/{}",
             annee, mois_str, jour_str
         ))
         .unwrap();
@@ -85,7 +85,7 @@ impl Planche {
         for vol in vols {
             let index_str = nom_fichier_date(index);
             let chemin = format!(
-                "./dossier_de_travail/{}/{}/{}/{}.json",
+                "../site/dossier_de_travail/{}/{}/{}/{}.json",
                 annee, mois_str, jour_str, index_str
             );
             let mut fichier = String::new();

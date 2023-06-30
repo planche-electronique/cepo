@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -21,20 +22,19 @@ fn main() {
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
+    // creation du dossier de travail si besoin
+    if !(Path::new("../site/dossier_de_travail").exists()) {
+        log::info!("Création du dossier de travail.");
+        fs::create_dir(format!("../site/dossier_de_travail")).unwrap();
+        log::info!("Dossier de travail créé.");
+    }
+
     let planche_arc: Arc<Mutex<Planche>> = Arc::new(Mutex::new(Planche::new()));
     let mut planche_lock = planche_arc.lock().unwrap();
     *planche_lock = Planche::planche_du(date_aujourdhui);
     drop(planche_lock);
 
     let planche_thread = planche_arc.clone();
-
-    // creation du dossier de travail si besoin
-    let mut chemins = fs::read_dir("./").unwrap();
-    if !(chemins.any(|chemin| {
-        chemin.unwrap().path().to_str().unwrap().to_string() == "./dossier_de_travail"
-    })) {
-        fs::create_dir(format!("./dossier_de_travail")).unwrap();
-    }
 
     log::info!("Serveur démarré.");
 
@@ -77,17 +77,15 @@ fn gestion_connexion(
         .expect("La requête n'a pas pu être parsé correctement.");
     let chemin = requete_parse.path;
     let corps_json = requete_parse.body.clone();
-    let nom_fichier = match chemin.as_str() {
-        "/" => "./planche/example.html",
-        string => string,
-    };
+    let mut nom_fichier = String::from("../site/");
+    nom_fichier.push_str(chemin.as_str());
 
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
 
     let contenu: String = match requete_parse.method {
         request::HTTPMethod::GET => {
-            if &nom_fichier[1..5] != "vols" {
+            if &nom_fichier[9..13] != "vols" {
                 if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string()
                     == ".json".to_string()
                 {
@@ -96,14 +94,14 @@ fn gestion_connexion(
                         \nAccess-Control-Allow-Origin: *",
                     );
                 }
-                fs::read_to_string(format!("./parametres{}", nom_fichier)).unwrap_or_else(|_| {
+                fs::read_to_string(format!("{}", nom_fichier)).unwrap_or_else(|_| {
                     ligne_statut = "HTTP/1.1 404 NOT FOUND";
-                    fs::read_to_string("./parametres/planche/404.html").unwrap_or_else(|err| {
+                    fs::read_to_string("../site/404.html").unwrap_or_else(|err| {
                         log::info!("pas de 404.html !! : {}", err);
                         "".to_string()
                     })
                 })
-            } else if &(nom_fichier[0..5]) == "/vols" {
+            } else if &(nom_fichier[8..13]) == "/vols" {
                 headers.push_str(
                     "Content-Type: application/json\
                     \nAccess-Control-Allow-Headers: origin, content-type\
