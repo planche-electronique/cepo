@@ -12,6 +12,11 @@ use std::fs;
 pub struct Planche {
     pub vols: Vec<Vol>,
     pub date: NaiveDate,
+    pub pilote_tr: String,   // parmi pilotes_tr
+    pub treuil: String,      // parmi treuils
+    pub pilote_rq: String,   // parmi pilotes_rq
+    pub remorqueurs: String, // parmi remorqueurs
+    pub chef_piste: String,  // parmi pilotes
 }
 
 impl Planche {
