@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn mise_a_jour_parse_test() {
         use crate::planche::MiseAJour;
-        use chrono::NaiveDate;
+        use chrono::{NaiveDate, NaiveTime};
         use core::panic;
 
         let mise_a_jour_declaree = MiseAJour {
@@ -194,6 +194,7 @@ mod tests {
             champ_mis_a_jour: String::from("code_vol"),
             nouvelle_valeur: String::from("M"),
             date: NaiveDate::from_ymd_opt(2023, 04, 25).unwrap(),
+            heure: NaiveTime::default(),
         };
 
         let mut mise_a_jour_parse = MiseAJour::new();
@@ -210,6 +211,7 @@ mod tests {
                 panic!("{} : erreur !!", err);
             }),
         );
+        mise_a_jour_parse.heure = NaiveTime::default();
 
         assert_eq!(mise_a_jour_declaree, mise_a_jour_parse)
     }
@@ -241,6 +243,7 @@ mod tests {
             champ_mis_a_jour: String::from("machine_decollage"),
             nouvelle_valeur: String::from("LUCIFER"),
             date: NaiveDate::from_ymd_opt(2023, 04, 25).unwrap(),
+            heure: NaiveTime::default(),
         };
 
         let mut planche = Planche { vols, date };
