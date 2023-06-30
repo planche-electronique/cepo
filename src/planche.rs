@@ -178,7 +178,7 @@ impl MettreAJour for Planche {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct MiseAJour {
     numero_ogn: u8,
     champ_mis_a_jour: String,
@@ -234,6 +234,33 @@ impl MiseAJour {
             }
         };
         Ok(())
+    }
+
+    pub fn vers_json(self: &Self) -> String {
+        json::object! {
+            numero_ogn: self.numero_ogn,
+            date: *self.date.format("%Y/%m/%d").to_string(),
+            champ_mis_a_jour: *self.champ_mis_a_jour,
+            nouvelle_valeur: *self.nouvelle_valeur
+        }
+        .dump()
+    }
+}
+
+pub trait MiseAJourJson {
+    fn vers_json(self: &Self) -> String;
+}
+
+impl MiseAJourJson for Vec<MiseAJour> {
+    fn vers_json(self: &Self) -> String {
+        let mut string = String::new();
+        string.push_str("[");
+        for maj in self {
+            string.push_str(maj.vers_json().as_str());
+            string.push_str(",")
+        }
+        string.push_str("]");
+        return string;
     }
 }
 

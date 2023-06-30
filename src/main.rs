@@ -7,7 +7,7 @@ use std::thread;
 
 use serveur::client::{Client, VariationRequete};
 use serveur::ogn::thread_ogn;
-use serveur::planche::{MettreAJour, MiseAJour, Planche};
+use serveur::planche::{MettreAJour, MiseAJour, MiseAJourJson, Planche};
 use serveur::vol::VolJson;
 
 use chrono::NaiveDate;
@@ -28,13 +28,11 @@ fn main() {
         fs::create_dir(format!("../site/dossier_de_travail")).unwrap();
         log::info!("Dossier de travail créé.");
     }
-    /// planche_arc est une lanche caché derrière un arc, permet d'enregistrer les vols du jour
+
     let planche_arc: Arc<Mutex<Planche>> = Arc::new(Mutex::new(Planche::new()));
     let mut planche_lock = planche_arc.lock().unwrap();
     *planche_lock = Planche::planche_du(date_aujourdhui);
     drop(planche_lock);
-    /// majs_arc est un vecteur de mises a jour qui serotn envoyées aux planches en faisant la requete, évitant de tout renvoyer à chaque fois
-    let majs_arc: Arc<Mutex<Vec<MiseAJour>>> = Arc::new(Mutex::new(Vec::new)));
 
     let planche_thread = planche_arc.clone();
 
@@ -53,7 +51,6 @@ fn main() {
         let requetes_en_cours = requetes_en_cours.clone();
 
         let planche_arc = planche_arc.clone();
-        let majs_arc = majs_arc.clone();
 
         let _ = thread::Builder::new()
             .name("Gestion".to_string())
@@ -67,6 +64,7 @@ fn gestion_connexion(
     mut flux: TcpStream,
     requetes_en_cours: Arc<Mutex<Vec<Client>>>,
     planche: Arc<Mutex<Planche>>,
+    majs_arc: Arc<Mutex<Vec<MiseAJour>>>,
 ) {
     let adresse = format!("{}", (flux.peer_addr().unwrap()));
 
@@ -86,6 +84,8 @@ fn gestion_connexion(
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
 
+    let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
+
     let contenu: String = match requete_parse.method {
         request::HTTPMethod::GET => {
             if &nom_fichier[9..13] != "vols" {
@@ -104,13 +104,12 @@ fn gestion_connexion(
                         "".to_string()
                     })
                 })
-            } else if &(nom_fichier[8..13]) == "/vols" {
+            } else if &(nom_fichier[9..13]) == "vols" {
                 headers.push_str(
                     "Content-Type: application/json\
                     \nAccess-Control-Allow-Headers: origin, content-type\
                     \nAccess-Control-Allow-Origin: *",
                 );
-                let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
                 let date_str = &nom_fichier[5..16];
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
 
@@ -123,6 +122,16 @@ fn gestion_connexion(
                     drop(planche_lock);
                     clone_planche.vols.vers_json()
                 }
+            } else if &nom_fichier[9..13] == "majs" {
+                headers.push_str(
+                    "Content-Type: application/json\
+                    \nAccess-Control-Allow-Headers: origin, content-type\
+                    \nAccess-Control-Allow-Origin: *",
+                );
+                let majs_lock = majs_arc.lock().unwrap();
+                let majs = (*majs_lock).clone();
+                drop(majs_lock);
+                majs.vers_json()
             } else {
                 "".to_string()
             }
