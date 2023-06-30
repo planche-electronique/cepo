@@ -12,11 +12,11 @@ use std::fs;
 pub struct Planche {
     pub vols: Vec<Vol>,
     pub date: NaiveDate,
-    pub pilote_tr: String,   // parmi pilotes_tr
-    pub treuil: String,      // parmi treuils
-    pub pilote_rq: String,   // parmi pilotes_rq
-    pub remorqueurs: String, // parmi remorqueurs
-    pub chef_piste: String,  // parmi pilotes
+    pub pilote_tr: String,  // parmi pilotes_tr
+    pub treuil: String,     // parmi treuils
+    pub pilote_rq: String,  // parmi pilotes_rq
+    pub remorqueur: String, // parmi remorqueurs
+    pub chef_piste: String, // parmi pilotes
 }
 
 impl Planche {
@@ -179,6 +179,15 @@ impl MettreAJour for Planche {
                             eprintln!("Requète de mise a jour mauvaise.");
                         }
                     }
+                }
+            }
+            if mise_a_jour.numero_ogn as i32 == 0 {
+                match mise_a_jour.champ_mis_a_jour.as_str() {
+                    "pilote_tr" => self.pilote_tr = mise_a_jour.nouvelle_valeur,
+                    "treuil" => self.treuil = mise_a_jour.nouvelle_valeur,
+                    "pilote_rq" => self.pilote_rq = mise_a_jour.nouvelle_valeur,
+                    "remorqueur" => self.remorqueur = mise_a_jour.nouvelle_valeur,
+                    "chef_piste" => self.chef_piste = mise_a_jour.nouvelle_valeur,
                 }
             }
         }
