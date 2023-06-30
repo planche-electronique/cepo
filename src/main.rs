@@ -97,8 +97,39 @@ fn gestion_connexion(
 
     let contenu: String = match requete_parse.method {
         request::HTTPMethod::GET => {
-            if &nom_fichier[8..12] != "vols" {
-                println!("!vol");
+            //fichier de majs            
+            if nom_fichier == "../site/majs".to_string() {
+                headers.push_str(
+                    "Content-Type: application/json\
+                    \nAccess-Control-Allow-Headers: origin, content-type\
+                    \nAccess-Control-Allow-Origin: *",
+                );
+                let mut majs_lock = majs_arc.lock().unwrap();
+                let majs = (*majs_lock).clone();
+                (*majs_lock).enlever_majs_obsoletes(chrono::Duration::minutes(5));
+                drop(majs_lock);
+                majs.vers_json()
+            // fichier de vols "émulé"
+            } else if &(nom_fichier[8..12]) == "vols" {
+                headers.push_str(
+                    "Content-Type: application/json\
+                    \nAccess-Control-Allow-Headers: origin, content-type\
+                    \nAccess-Control-Allow-Origin: *",
+                );
+                let date_str = &nom_fichier[12..23];
+                let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
+
+                if date != date_aujourdhui {
+                    Planche::planche_du(date).vols.vers_json()
+                } else {
+                    //on recupere la liste de planche
+                    let planche_lock = planche.lock().unwrap();
+                    let clone_planche = (*planche_lock).clone();
+                    drop(planche_lock);
+                    clone_planche.vols.vers_json()
+                }
+            //fichier de vols "émulé"
+            } else if &nom_fichier[8..12] != "vols" {
                 if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string()
                     == ".json".to_string()
                 {
@@ -121,36 +152,7 @@ fn gestion_connexion(
                         "".to_string()
                     })
                 })
-            } else if &(nom_fichier[8..12]) == "vols" {
-                println!("vols");
-                headers.push_str(
-                    "Content-Type: application/json\
-                    \nAccess-Control-Allow-Headers: origin, content-type\
-                    \nAccess-Control-Allow-Origin: *",
-                );
-                let date_str = &nom_fichier[12..23];
-                let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
-
-                if date != date_aujourdhui {
-                    Planche::planche_du(date).vols.vers_json()
-                } else {
-                    //on recupere la liste de planche
-                    let planche_lock = planche.lock().unwrap();
-                    let clone_planche = (*planche_lock).clone();
-                    drop(planche_lock);
-                    clone_planche.vols.vers_json()
-                }
-            } else if &nom_fichier[9..13] == "majs" {
-                headers.push_str(
-                    "Content-Type: application/json\
-                    \nAccess-Control-Allow-Headers: origin, content-type\
-                    \nAccess-Control-Allow-Origin: *",
-                );
-                let mut majs_lock = majs_arc.lock().unwrap();
-                let majs = (*majs_lock).clone();
-                (*majs_lock).enlever_majs_obsoletes(chrono::Duration::minutes(5));
-                drop(majs_lock);
-                majs.vers_json()
+             
             } else {
                 "".to_string()
             }
