@@ -34,6 +34,8 @@ fn main() {
     *planche_lock = Planche::planche_du(date_aujourdhui);
     drop(planche_lock);
 
+    let majs_arc: Arc<Mutex<Vec<MiseAJour>>> = Arc::new(Mutex::new(Vec::new()));
+
     let planche_thread = planche_arc.clone();
 
     log::info!("Serveur démarré.");
@@ -51,11 +53,12 @@ fn main() {
         let requetes_en_cours = requetes_en_cours.clone();
 
         let planche_arc = planche_arc.clone();
+        let majs_arc = majs_arc.clone();
 
         let _ = thread::Builder::new()
             .name("Gestion".to_string())
             .spawn(move || {
-                gestion_connexion(flux, requetes_en_cours, planche_arc);
+                gestion_connexion(flux, requetes_en_cours, planche_arc, majs_arc);
             });
     }
 }
@@ -153,6 +156,10 @@ fn gestion_connexion(
                     .parse(json::parse(&corps_json_nettoye).unwrap())
                     .unwrap();
                 let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
+                // On ajoute la mise a jour au vecteur de mises a jour
+                let mut majs_lock = majs_arc.lock().unwrap();
+                (*majs_lock).push(mise_a_jour.clone());
+                drop(majs_lock);
 
                 if mise_a_jour.date != date_aujourdhui {
                     let mut planche_voulue = Planche::planche_du(mise_a_jour.date);
