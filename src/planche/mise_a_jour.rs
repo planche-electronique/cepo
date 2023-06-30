@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveTime};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MiseAJour {
@@ -6,6 +6,7 @@ pub struct MiseAJour {
     pub champ_mis_a_jour: String,
     pub nouvelle_valeur: String,
     pub date: NaiveDate,
+    pub heure: NaiveTime,
 }
 
 impl MiseAJour {
@@ -15,6 +16,7 @@ impl MiseAJour {
             champ_mis_a_jour: String::default(),
             nouvelle_valeur: String::default(),
             date: NaiveDate::default(),
+            heure: NaiveTime::default(),
         }
     }
 
@@ -50,6 +52,8 @@ impl MiseAJour {
                     "%Y/%m/%d",
                 )
                 .unwrap();
+
+                self.heure = chrono::Local::now().time();
             }
             _ => {
                 eprintln!("pas un objet json");
@@ -63,7 +67,8 @@ impl MiseAJour {
             numero_ogn: self.numero_ogn,
             date: *self.date.format("%Y/%m/%d").to_string(),
             champ_mis_a_jour: *self.champ_mis_a_jour,
-            nouvelle_valeur: *self.nouvelle_valeur
+            nouvelle_valeur: *self.nouvelle_valeur,
+            heure: *self.heure.format("%H:%M").to_string(),
         }
         .dump()
     }
