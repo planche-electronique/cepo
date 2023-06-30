@@ -7,7 +7,7 @@ use std::thread;
 
 use serveur::client::{Client, VariationRequete};
 use serveur::ogn::thread_ogn;
-use serveur::planche::mise_a_jour::{MiseAJour, MiseAJourJson};
+use serveur::planche::mise_a_jour::{MiseAJour, MiseAJourJson, MiseAJourObsoletes};
 use serveur::planche::{MettreAJour, Planche};
 use serveur::vol::VolJson;
 
@@ -82,8 +82,13 @@ fn gestion_connexion(
         .expect("La requête n'a pas pu être parsé correctement.");
     let chemin = requete_parse.path;
     let corps_json = requete_parse.body.clone();
-    let mut nom_fichier = String::from("../site/");
-    nom_fichier.push_str(chemin.as_str());
+    let mut nom_fichier = chemin.to_string();
+
+    if nom_fichier == String::from("/") {
+        nom_fichier = String::from("/index.html");
+    }
+    nom_fichier.insert_str(0, "../site");
+    println!("{}", nom_fichier);
 
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
@@ -92,7 +97,7 @@ fn gestion_connexion(
 
     let contenu: String = match requete_parse.method {
         request::HTTPMethod::GET => {
-            if &nom_fichier[9..13] != "vols" {
+            if &nom_fichier[4..8] != "vols" {
                 if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string()
                     == ".json".to_string()
                 {
@@ -100,15 +105,22 @@ fn gestion_connexion(
                         "Content-Type: application/json\
                         \nAccess-Control-Allow-Origin: *",
                     );
+                } else if nom_fichier[nom_fichier.len() - 3..nom_fichier.len()].to_string()
+                    == ".js".to_string()
+                {
+                    headers.push_str(
+                        "Content-Type: application/javascript\
+                        \nAccess-Control-Allow-Origin: *",
+                    );
                 }
-                fs::read_to_string(format!("{}", nom_fichier)).unwrap_or_else(|_| {
+                fs::read_to_string(format!("../site/{}", nom_fichier)).unwrap_or_else(|_| {
                     ligne_statut = "HTTP/1.1 404 NOT FOUND";
                     fs::read_to_string("../site/404.html").unwrap_or_else(|err| {
                         log::info!("pas de 404.html !! : {}", err);
                         "".to_string()
                     })
                 })
-            } else if &(nom_fichier[9..13]) == "vols" {
+            } else if &(nom_fichier[4..8]) == "vols" {
                 headers.push_str(
                     "Content-Type: application/json\
                     \nAccess-Control-Allow-Headers: origin, content-type\
@@ -132,8 +144,9 @@ fn gestion_connexion(
                     \nAccess-Control-Allow-Headers: origin, content-type\
                     \nAccess-Control-Allow-Origin: *",
                 );
-                let majs_lock = majs_arc.lock().unwrap();
+                let mut majs_lock = majs_arc.lock().unwrap();
                 let majs = (*majs_lock).clone();
+                (*majs_lock).enlever_majs_obsoletes(chrono::Duration::minutes(5));
                 drop(majs_lock);
                 majs.vers_json()
             } else {

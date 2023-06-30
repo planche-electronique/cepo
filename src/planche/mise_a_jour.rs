@@ -90,3 +90,21 @@ impl MiseAJourJson for Vec<MiseAJour> {
         return string;
     }
 }
+
+pub trait MiseAJourObsoletes {
+    fn enlever_majs_obsoletes(&mut self, temps: chrono::Duration);
+}
+
+impl MiseAJourObsoletes for Vec<MiseAJour> {
+    fn enlever_majs_obsoletes(&mut self, temps: chrono::Duration) {
+        let heure_actuelle = chrono::Local::now().time();
+        let mut i = 0;
+        while i < self.len() {
+            if (heure_actuelle - self[i].heure) > temps {
+                self.remove(i as usize);
+            } else {
+                i += 1;
+            }
+        }
+    }
+}
