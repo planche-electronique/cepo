@@ -20,8 +20,22 @@ impl Planche {
 
         //on récupère les données du vol même s'il n'y a pas d'informations
         let requete = requete_ogn(date);
-        let planche_du_jour = traitement_requete_ogn(requete, date);
-        planche_du_jour.enregistrer();
+        match requete {
+            Ok(requete_developpee) => {
+                let planche_du_jour = traitement_requete_ogn(requete_developpee, date);
+                planche_du_jour.enregistrer();
+            }
+            Err(_) => {
+                println!("Impossible d'obtenir la requete ogn lors de la lecture de la planche")
+            }
+        }
+        Planche::planche_depuis_disque(date)
+    }
+
+    pub fn planche_depuis_disque(date: NaiveDate) -> Planche {
+        let annee = date.year();
+        let mois = date.month();
+        let jour = date.day();
 
         let mois_str = nom_fichier_date(mois as i32);
         let jour_str = nom_fichier_date(jour as i32);
@@ -33,7 +47,6 @@ impl Planche {
             annee, mois_str, jour_str
         ))
         .unwrap();
-
         for fichier in fichiers {
             let vol_json = fs::read_to_string(fichier.unwrap().path().to_str().unwrap()).unwrap();
             let vol = Vol::depuis_json(json::parse(vol_json.as_str()).unwrap());
