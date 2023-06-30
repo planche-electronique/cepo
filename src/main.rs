@@ -10,10 +10,11 @@ use serveur::planche::{MettreAJour, MiseAJour, Planche};
 use serveur::vol::VolJson;
 
 use chrono::NaiveDate;
-
+use log;
 use simple_http_parser::request;
 
 fn main() {
+    log::info!("Démarrage...")
     let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
@@ -37,6 +38,7 @@ fn main() {
     let _ = thread::Builder::new()
         .name("Thread OGN".to_string())
         .spawn(move || {
+            log::info!("Lancement du thread qui s'occupe des requetes OGN automatiquement.");
             thread_ogn(planche_thread);
         });
 
