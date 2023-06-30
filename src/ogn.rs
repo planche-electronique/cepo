@@ -3,6 +3,7 @@ use crate::vol::Vol;
 use crate::Appareil;
 use chrono::prelude::*;
 use json::JsonValue;
+use log;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time;

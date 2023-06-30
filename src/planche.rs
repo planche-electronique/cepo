@@ -2,6 +2,7 @@ use crate::ogn::{requete_ogn, traitement_requete_ogn};
 use crate::vol::{Vol, VolJson};
 use crate::{creer_chemin_jour, nom_fichier_date};
 use chrono::{Datelike, NaiveDate, NaiveTime};
+use log;
 use std::fs;
 
 #[derive(PartialEq, Debug, Clone)]
@@ -36,6 +37,12 @@ impl Planche {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
+        log::info!(
+            "Chargement depuis le disque de la planche du {}/{}/{}",
+            annee,
+            mois,
+            jour
+        );
 
         let mois_str = nom_fichier_date(mois as i32);
         let jour_str = nom_fichier_date(jour as i32);
@@ -62,6 +69,13 @@ impl Planche {
         let mois = date.month();
         let jour = date.day();
 
+        log::info!(
+            "Enregistrement de la planche du {}/{}/{}",
+            annee,
+            mois,
+            jour
+        );
+
         let jour_str = nom_fichier_date(jour as i32);
         let mois_str = nom_fichier_date(mois as i32);
 
@@ -77,7 +91,7 @@ impl Planche {
             let mut fichier = String::new();
             if std::path::Path::new(chemin.clone().as_str()).exists() {
                 fichier = fs::read_to_string(chemin.clone()).unwrap_or_else(|err| {
-                    println!(
+                    log::error!(
                         "fichier numero {} de chemin {} introuvable ou non ouvrable : {}",
                         index,
                         chemin.clone(),
@@ -123,7 +137,7 @@ impl MettreAJour for Planche {
     fn mettre_a_jour(&mut self, mise_a_jour: MiseAJour) {
         let mut vols = self.vols.clone();
         if mise_a_jour.date != self.date {
-            eprintln!("Mise a jour impossible: les dates ne sont pas les mêmes !");
+            log::error!("Mise a jour impossible: les dates ne sont pas les mêmes !");
         } else {
             for vol in &mut vols {
                 if vol.numero_ogn == mise_a_jour.numero_ogn as i32 {
@@ -186,14 +200,14 @@ impl MiseAJour {
         match texte_json {
             json::JsonValue::Object(objet) => {
                 self.numero_ogn = objet["numero_ogn"].as_u8().unwrap_or_else(|| {
-                    eprintln!("pas de numero de vol dans la requete");
+                    log::error!("pas de numero de vol dans la requete");
                     0
                 });
 
                 self.champ_mis_a_jour = objet["champ_mis_a_jour"]
                     .as_str()
                     .unwrap_or_else(|| {
-                        eprintln!("pas le bon champ pour la nouvelle valeur");
+                        log::error!("pas le bon champ pour la nouvelle valeur");
                         ""
                     })
                     .to_string();
@@ -201,14 +215,14 @@ impl MiseAJour {
                 self.nouvelle_valeur = objet["nouvelle_valeur"]
                     .as_str()
                     .unwrap_or_else(|| {
-                        eprintln!("pas la bonne valeur pour la nouvelle valeur");
+                        log::error!("pas la bonne valeur pour la nouvelle valeur");
                         ""
                     })
                     .to_string();
 
                 self.date = NaiveDate::parse_from_str(
                     objet["date"].as_str().unwrap_or_else(|| {
-                        eprintln!("pas la bonne valeur pour la nouvelle valeur");
+                        log::error!("pas la bonne valeur pour la nouvelle valeur");
                         ""
                     }),
                     "%Y/%m/%d",
