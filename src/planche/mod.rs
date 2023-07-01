@@ -170,9 +170,9 @@ impl MettreAJour for Planche {
         if mise_a_jour.date != self.date {
             log::error!("Mise a jour impossible: les dates ne sont pas les mêmes !");
         } else if mise_a_jour.champ_mis_a_jour.clone() == "nouveau" {
-            vol.push(Vol {
-                numero_ogn: mise_a_jour.numero_ogn,
-                aeronef: mise_a_jour.nouvelle_valeur,
+            vols.push(Vol {
+                numero_ogn: mise_a_jour.numero_ogn as i32,
+                aeronef: mise_a_jour.nouvelle_valeur.clone(),
                 code_vol: String::new(),
                 code_decollage: String::new(),
                 machine_decollage: String::new(),
@@ -182,6 +182,8 @@ impl MettreAJour for Planche {
                 decollage: NaiveTime::default(),
                 atterissage: NaiveTime::default(),
             });
+        } else if mise_a_jour.champ_mis_a_jour.clone() == "supprimer" {
+            vols.retain(|vol| vol.numero_ogn != mise_a_jour.numero_ogn as i32);
         } else {
             for vol in &mut vols {
                 if vol.numero_ogn == mise_a_jour.numero_ogn as i32 {
