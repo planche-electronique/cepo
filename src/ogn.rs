@@ -18,6 +18,10 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
     match requete {
         Ok(requete_developpee) => {
             let nouvelle_planche = traitement_requete_ogn(requete_developpee, date);
+
+            let mut rang_prochain_vol = 0;
+            let mut priorite_prochain_vol = 0;
+            let mut rang_nouveau_vol = 0;
             for nouveau_vol in nouvelle_planche.vols.clone() {
                 let mut existe = false;
                 for ancien_vol in &mut ancienne_planche.vols {
@@ -32,11 +36,33 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
                         if ancien_vol.atterissage == heure_default {
                             (*ancien_vol).atterissage = nouveau_vol.atterissage;
                         }
+                    } else if nouveau_vol.aeronef == ancien_vol.aeronef {
+                        if priorite_prochain_vol != 0 {
+                            if priorite_prochain_vol < nouveau_vol.numero_ogn
+                                && nouveau_vol.numero_ogn < 0
+                            {
+                                existe = true;
+                                priorite_prochain_vol = nouveau_vol.numero_ogn;
+                                rang_prochain_vol = rang_nouveau_vol;
+                            }
+                        } else if nouveau_vol.numero_ogn < 0 && priorite_prochain_vol == 0 {
+                            existe = true;
+                            priorite_prochain_vol = nouveau_vol.numero_ogn;
+                            rang_prochain_vol = rang_nouveau_vol;
+                        }
                     }
+                }
+                if priorite_prochain_vol != 0 {
+                    // on recupere le vol affecté avec le plus de priorité et on lui affecte les données de ogn
+                    ancienne_planche.vols[rang_prochain_vol].numero_ogn = nouveau_vol.numero_ogn;
+                    ancienne_planche.vols[rang_prochain_vol].code_decollage = nouveau_vol.code_decollage.clone();
+                    ancienne_planche.vols[rang_prochain_vol].decollage = nouveau_vol.decollage;
+                    ancienne_planche.vols[rang_prochain_vol].atterissage = nouveau_vol.atterissage;  
                 }
                 if !existe {
                     ancienne_planche.vols.push(nouveau_vol);
                 }
+                rang_nouveau_vol += 1;
             }
 
             let mut planche_lock = planche.lock().unwrap();
@@ -183,5 +209,13 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
             atterissage,
         });
     }
-    Planche { vols, date }
+    Planche {
+        date,
+         vols,
+         pilote_tr: String::new(),
+         treuil: String::new(),
+         pilote_rq: String::new(),
+         remorqueur: String::new(),
+         chef_piste: String::new(),
+    }
 }

@@ -12,6 +12,11 @@ use std::fs;
 pub struct Planche {
     pub vols: Vec<Vol>,
     pub date: NaiveDate,
+    pub pilote_tr: String,  // parmi pilotes_tr
+    pub treuil: String,     // parmi treuils
+    pub pilote_rq: String,  // parmi pilotes_rq
+    pub remorqueur: String, // parmi remorqueurs
+    pub chef_piste: String, // parmi pilotes
 }
 
 impl Planche {
@@ -62,7 +67,15 @@ impl Planche {
             let vol = Vol::depuis_json(json::parse(vol_json.as_str()).unwrap());
             vols.push(vol);
         }
-        Planche { date, vols }
+        Planche {
+            date,
+            vols,
+            pilote_tr: String::new(),
+            treuil: String::new(),
+            pilote_rq: String::new(),
+            remorqueur: String::new(),
+            chef_piste: String::new(),
+        }
     }
 
     pub fn enregistrer(&self) {
@@ -115,17 +128,32 @@ impl Planche {
         Planche {
             vols: Vec::new(),
             date: NaiveDate::default(),
+            pilote_tr: String::new(),
+            treuil: String::new(),
+            pilote_rq: String::new(),
+            remorqueur: String::new(),
+            chef_piste: String::new(),
         }
     }
 
     pub fn vers_json(self) -> String {
         let vols_json = self.vols.vers_json();
         let date_json = self.date.format("%Y/%m/%d").to_string();
+        let reste_json = json::stringify(json::object! {
+            pilote_tr: self.pilote_tr,
+            treuil: self.treuil,
+            pilote_rq: self.pilote_rq,
+            remorqueur: self.remorqueur,
+            chef_piste: self.chef_piste,
+        });
         let mut json = String::new();
         json.push_str("{ \"date\": \"");
         json.push_str(&date_json);
         json.push_str("\",\n\"vols\" : ");
         json.push_str(&vols_json);
+        json.push_str(", \n ");
+        json.push_str(&reste_json);
+        json.push_str("\n");
         json.push_str("}");
         return json;
     }
@@ -141,6 +169,21 @@ impl MettreAJour for Planche {
         let mut vols = self.vols.clone();
         if mise_a_jour.date != self.date {
             log::error!("Mise a jour impossible: les dates ne sont pas les mêmes !");
+        } else if mise_a_jour.champ_mis_a_jour.clone() == "nouveau" {
+            vols.push(Vol {
+                numero_ogn: mise_a_jour.numero_ogn as i32,
+                aeronef: mise_a_jour.nouvelle_valeur.clone(),
+                code_vol: String::new(),
+                code_decollage: String::new(),
+                machine_decollage: String::new(),
+                decolleur: String::new(),
+                pilote1: String::new(),
+                pilote2: String::new(),
+                decollage: NaiveTime::default(),
+                atterissage: NaiveTime::default(),
+            });
+        } else if mise_a_jour.champ_mis_a_jour.clone() == "supprimer" {
+            vols.retain(|vol| vol.numero_ogn != mise_a_jour.numero_ogn as i32);
         } else {
             for vol in &mut vols {
                 if vol.numero_ogn == mise_a_jour.numero_ogn as i32 {
@@ -174,6 +217,20 @@ impl MettreAJour for Planche {
                             eprintln!("Requète de mise a jour mauvaise.");
                         }
                     }
+                }
+            }
+            if mise_a_jour.numero_ogn as i32 == 0 {
+                match mise_a_jour.champ_mis_a_jour.as_str() {
+                    "pilote_tr" => self.pilote_tr = mise_a_jour.nouvelle_valeur,
+                    "treuil" => self.treuil = mise_a_jour.nouvelle_valeur,
+                    "pilote_rq" => self.pilote_rq = mise_a_jour.nouvelle_valeur,
+                    "remorqueur" => self.remorqueur = mise_a_jour.nouvelle_valeur,
+                    "chef_piste" => self.chef_piste = mise_a_jour.nouvelle_valeur,
+                    _ => log::warn!(
+                        "la mise a jour pour le {} à {} ne contient pas le bon champ",
+                        mise_a_jour.date.format("%Y/%m/%d"),
+                        mise_a_jour.heure.format("%H:%M")
+                    ),
                 }
             }
         }
@@ -246,7 +303,15 @@ mod tests {
             heure: NaiveTime::default(),
         };
 
-        let mut planche = Planche { vols, date };
+        let mut planche = Planche {
+            vols,
+            date,
+            pilote_tr: String::new(),
+            treuil: String::new(),
+            pilote_rq: String::new(),
+            remorqueur: String::new(),
+            chef_piste: String::new(),
+        };
         planche.mettre_a_jour(mise_a_jour);
 
         let vol_verif = Vol {
@@ -265,6 +330,11 @@ mod tests {
         let planche_verif = Planche {
             vols: vols_verif,
             date,
+            pilote_tr: String::new(),
+            treuil: String::new(),
+            pilote_rq: String::new(),
+            remorqueur: String::new(),
+            chef_piste: String::new(),
         };
         assert_eq!(planche, planche_verif)
     }
