@@ -169,6 +169,19 @@ impl MettreAJour for Planche {
         let mut vols = self.vols.clone();
         if mise_a_jour.date != self.date {
             log::error!("Mise a jour impossible: les dates ne sont pas les mêmes !");
+        } else if mise_a_jour.champ_mis_a_jour.clone() == "nouveau" {
+            vol.push(Vol {
+                numero_ogn: mise_a_jour.numero_ogn,
+                aeronef: mise_a_jour.nouvelle_valeur,
+                code_vol: String::new(),
+                code_decollage: String::new(),
+                machine_decollage: String::new(),
+                decolleur: String::new(),
+                pilote1: String::new(),
+                pilote2: String::new(),
+                decollage: NaiveTime::default(),
+                atterissage: NaiveTime::default(),
+            });
         } else {
             for vol in &mut vols {
                 if vol.numero_ogn == mise_a_jour.numero_ogn as i32 {
