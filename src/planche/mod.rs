@@ -211,6 +211,11 @@ impl MettreAJour for Planche {
                     "pilote_rq" => self.pilote_rq = mise_a_jour.nouvelle_valeur,
                     "remorqueur" => self.remorqueur = mise_a_jour.nouvelle_valeur,
                     "chef_piste" => self.chef_piste = mise_a_jour.nouvelle_valeur,
+                    _ => log::warn!(
+                        "la mise a jour pour le {} à {} ne contient pas le bon champ",
+                        mise_a_jour.date.format("%Y/%m/%d"),
+                        mise_a_jour.heure.format("%H:%M")
+                    ),
                 }
             }
         }
