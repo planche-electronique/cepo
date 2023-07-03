@@ -97,8 +97,6 @@ fn gestion_connexion(
     let mut ligne_statut = "HTTP/1.1 200 OK";
     let mut headers = String::new();
 
-    let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
-
     let contenu: String = match requete_parse.method {
         request::HTTPMethod::GET => {
             //fichier de majs
@@ -123,15 +121,22 @@ fn gestion_connexion(
                 let date_str = &nom_fichier[12..23];
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
 
-                if date != date_aujourdhui {
-                    Planche::planche_du(date).vols.vers_json()
-                } else {
-                    //on recupere la liste de planche
-                    let planche_lock = planche.lock().unwrap();
-                    let clone_planche = (*planche_lock).clone();
-                    drop(planche_lock);
-                    clone_planche.vols.vers_json()
-                }
+                Planche::planche_du(date).vols.vers_json()
+
+            //fichier de vols "émulé"
+            } else if &(nom_fichier[8..15]) == "planche" {
+                headers.push_str(
+                    "Content-Type: application/json\
+                    \nAccess-Control-Allow-Headers: origin, content-type\
+                    \nAccess-Control-Allow-Origin: *",
+                );
+
+                //on recupere la liste de planche
+                let planche_lock = planche.lock().unwrap();
+                let clone_planche = (*planche_lock).clone();
+                drop(planche_lock);
+                clone_planche.vers_json()
+
             //fichier de vols "émulé"
             } else if &nom_fichier[8..12] != "vols" {
                 if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string()
