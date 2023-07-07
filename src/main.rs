@@ -167,7 +167,7 @@ fn gestion_connexion(
         }
 
         request::HTTPMethod::POST => {
-            if nom_fichier == "/mise_a_jour" {
+            if nom_fichier == "../site/mise_a_jour" {
                 // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
                 let mut mise_a_jour = MiseAJour::new();
                 let mut corps_json_nettoye = String::new(); //necessite de creer une string qui va contenir
