@@ -2,7 +2,7 @@ use chrono::{NaiveDate, NaiveTime};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MiseAJour {
-    pub numero_ogn: u8,
+    pub numero_ogn: i32,
     pub champ_mis_a_jour: String,
     pub nouvelle_valeur: String,
     pub date: NaiveDate,
@@ -12,7 +12,7 @@ pub struct MiseAJour {
 impl MiseAJour {
     pub fn new() -> Self {
         MiseAJour {
-            numero_ogn: u8::default(), //numero du vol **OGN**
+            numero_ogn: i32::default(), //numero du vol **OGN**
             champ_mis_a_jour: String::default(),
             nouvelle_valeur: String::default(),
             date: NaiveDate::default(),
@@ -23,7 +23,7 @@ impl MiseAJour {
     pub fn parse(&mut self, texte_json: json::JsonValue) -> Result<(), String> {
         match texte_json {
             json::JsonValue::Object(objet) => {
-                self.numero_ogn = objet["numero_ogn"].as_u8().unwrap_or_else(|| {
+                self.numero_ogn = objet["numero_ogn"].as_i32().unwrap_or_else(|| {
                     log::error!("pas de numero de vol dans la requete");
                     0
                 });

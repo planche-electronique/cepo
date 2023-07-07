@@ -151,7 +151,7 @@ impl Planche {
         json.push_str(&date_json);
         json.push_str("\",\n\"vols\" : ");
         json.push_str(&vols_json);
-        json.push_str(", \n ");
+        json.push_str(", \n \"affectations\": ");
         json.push_str(&reste_json);
         json.push_str("\n");
         json.push_str("}");
