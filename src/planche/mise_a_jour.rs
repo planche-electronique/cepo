@@ -86,6 +86,9 @@ impl MiseAJourJson for Vec<MiseAJour> {
             string.push_str(maj.vers_json().as_str());
             string.push_str(",")
         }
+        if string != String::from("[") {
+            string.pop();
+        }
         string.push_str("]");
         return string;
     }
