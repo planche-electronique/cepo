@@ -9,7 +9,7 @@ use std::thread;
 use std::time;
 
 pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
-    let date = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
+    let date = chrono::Local::now().date_naive();
     let planche_lock = planche.lock().unwrap();
     let mut ancienne_planche = (*planche_lock).clone();
     drop(planche_lock);

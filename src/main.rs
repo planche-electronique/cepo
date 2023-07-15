@@ -19,7 +19,7 @@ use simple_http_parser::request;
 fn main() {
     env_logger::init();
     log::info!("Démarrage...");
-    let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
+    let date_aujourdhui = chrono::Local::now().date_naive();
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
 
@@ -181,7 +181,7 @@ fn gestion_connexion(
                 mise_a_jour
                     .parse(json::parse(&corps_json_nettoye).unwrap())
                     .unwrap();
-                let date_aujourdhui = NaiveDate::from_ymd_opt(2023, 04, 25).unwrap();
+                let date_aujourdhui = chrono::Local::now().date_naive();
                 // On ajoute la mise a jour au vecteur de mises a jour
                 let mut majs_lock = majs_arc.lock().unwrap();
                 (*majs_lock).push(mise_a_jour.clone());
