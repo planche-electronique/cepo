@@ -9,7 +9,7 @@ use serveur::client::{Client, VariationRequete};
 use serveur::ogn::thread_ogn;
 use serveur::planche::mise_a_jour::{MiseAJour, MiseAJourJson, MiseAJourObsoletes};
 use serveur::planche::{MettreAJour, Planche};
-use serveur::vol::VolJson;
+use serveur::vol::{Vol, VolJson};
 
 use chrono::NaiveDate;
 use env_logger;
@@ -89,9 +89,9 @@ fn gestion_connexion(
     }
     nom_fichier.insert_str(0, "../site");
     log::info!(
-        "Requete du fichier {} de {}",
-        nom_fichier.clone(),
-        adresse.clone()
+        "{} : requete du fichier {}",
+        adresse.clone(),
+        nom_fichier.clone()
     );
 
     let mut ligne_statut = "HTTP/1.1 200 OK";
@@ -120,8 +120,9 @@ fn gestion_connexion(
                 );
                 let date_str = &nom_fichier[12..23];
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
-
-                Planche::planche_du(date).vols.vers_json()
+                
+                let vols :Vec<Vol> = Vec::du(date);             
+                vols.vers_json()
 
             //fichier de vols "émulé"
             } else if &(nom_fichier[8..15]) == "planche" {
