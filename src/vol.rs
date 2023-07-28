@@ -1,5 +1,7 @@
-use chrono::NaiveTime;
+use chrono::{NaiveTime, NaiveDate, Datelike};
 use json::JsonValue;
+use crate::nom_fichier_date;
+use std::fs;
 
 
 #[derive(Clone, PartialEq, Debug)]
@@ -82,6 +84,7 @@ impl Vol {
 pub trait VolJson {
     fn vers_json(self) -> String;
     fn depuis_json(&mut self, json: JsonValue);
+    fn du(date: NaiveDate) -> Vec<Vol>;
 }
 
 impl VolJson for Vec<Vol> {
@@ -106,6 +109,31 @@ impl VolJson for Vec<Vol> {
             vols.push(Vol::depuis_json(vol.clone()));
         }
         (*self) = vols;
+    }
+    
+    fn du(date: NaiveDate) -> Vec<Vol> {
+        let annee = date.year();
+        let mois = date.month();
+        let jour = date.day();
+        
+        let mois_str = nom_fichier_date(mois as i32);
+        let jour_str = nom_fichier_date(jour as i32);
+        
+        let fichiers = fs::read_dir(format!("../site/dossier_de_travail/{}/{}/{}/", annee, mois_str, jour_str)).unwrap();
+        let mut vols: Vec<Vol> = Vec::new();
+        
+        for fichier in fichiers {
+            let chemin_fichier = fichier.unwrap().file_name().into_string().unwrap();
+            if chemin_fichier.clone() != format!("affectations.json") {
+                let vol_json = fs::read_to_string(format!("../site/dossier_de_travail/{}/{}/{}/{}", annee, mois_str, jour_str,chemin_fichier.clone())).unwrap_or_else(|err| {
+                    log::error!("Impossible d'ouvrir le fichier {} : {}", chemin_fichier.clone(), err);
+                    String::from("")
+                });
+                let vol = Vol::depuis_json(json::parse(vol_json.as_str()).unwrap());
+                vols.push(vol);
+            }
+        }
+        vols
     }
 }
 

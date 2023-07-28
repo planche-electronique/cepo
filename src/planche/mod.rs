@@ -5,6 +5,7 @@ use crate::vol::{Vol, VolJson};
 use crate::{creer_chemin_jour, nom_fichier_date};
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use log;
+use json;
 pub use mise_a_jour::MiseAJour;
 use std::fs;
 
@@ -55,26 +56,25 @@ impl Planche {
         let mois_str = nom_fichier_date(mois as i32);
         let jour_str = nom_fichier_date(jour as i32);
 
-        let mut vols: Vec<Vol> = Vec::new();
-
-        let fichiers = fs::read_dir(format!(
-            "../site/dossier_de_travail/{}/{}/{}",
-            annee, mois_str, jour_str
-        ))
-        .unwrap();
-        for fichier in fichiers {
-            let vol_json = fs::read_to_string(fichier.unwrap().path().to_str().unwrap()).unwrap();
-            let vol = Vol::depuis_json(json::parse(vol_json.as_str()).unwrap());
-            vols.push(vol);
-        }
+        let vols: Vec<Vol> = Vec::du(date);
+        let affectations_str = fs::read_to_string(format!("../site/dossier_de_travail/{}/{}/{}/affectations.json",
+            annee, mois_str, jour_str)).unwrap();
+        let affectations_json = json::parse(&affectations_str).unwrap();
+        let pilote_tr = affectations_json["pilote_tr"].as_str().unwrap().to_string();
+        let treuil = affectations_json["treuil"].as_str().unwrap().to_string();
+        let pilote_rq = affectations_json["pilote_rq"].as_str().unwrap().to_string();
+        let remorqueur = affectations_json["remorqueur"].as_str().unwrap().to_string();
+        let chef_piste = affectations_json["chef_piste"].as_str().unwrap().to_string();
+        
+        
         Planche {
             date,
             vols,
-            pilote_tr: String::new(),
-            treuil: String::new(),
-            pilote_rq: String::new(),
-            remorqueur: String::new(),
-            chef_piste: String::new(),
+            pilote_tr,
+            treuil,
+            pilote_rq,
+            remorqueur,
+            chef_piste,
         }
     }
 
@@ -118,9 +118,29 @@ impl Planche {
             }
 
             if fichier != vol.vers_json() {
-                fs::write(chemin, vol.vers_json()).expect("impossible d'ecrire le fichier");
+                fs::write(chemin, vol.vers_json()).unwrap_or_else(|err| {
+                    log::error!("Impossible d'écrire le fichier du jour {}/{}/{} et d'index {} : {}", annee, mois_str, jour_str, index, err);
+                });
             }
             index += 1;
+        }
+        
+        let chemin = format!(
+            "../site/dossier_de_travail/{}/{}/{}/affectations.json",
+            annee, mois_str, jour_str
+        );
+        let affectations_fichier = fs::read_to_string(chemin.clone()).unwrap_or_default();
+        let affectations = json::object!{
+            "pilote_tr": self.pilote_tr.clone(),
+            "treuil": self.treuil.clone(),
+            "pilote_rq": self.pilote_rq.clone(),
+            "remorqueur": self.remorqueur.clone(),
+            "chef_piste": self.chef_piste.clone(),        
+        };
+        if json::stringify(affectations.clone()) != affectations_fichier {
+            fs::write(chemin.clone(), json::stringify(affectations.clone())).unwrap_or_else(|err| {
+                log::error!("Impossible d'écrire les affectations : {}", err);
+            }) 
         }
     }
 
