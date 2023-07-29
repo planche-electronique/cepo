@@ -24,7 +24,7 @@ fn main() {
     // creation du dossier de travail si besoin
     if !(Path::new("../site/dossier_de_travail").exists()) {
         log::info!("Création du dossier de travail.");
-        fs::create_dir("../site/dossier_de_travail".to_string()).unwrap();
+        fs::create_dir("../site/dossier_de_travail").unwrap();
         log::info!("Dossier de travail créé.");
     }
 
