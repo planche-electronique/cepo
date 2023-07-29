@@ -151,7 +151,7 @@ impl VolJson for Vec<Vol> {
 
         for fichier in fichiers {
             let chemin_fichier = fichier.unwrap().file_name().into_string().unwrap();
-            if chemin_fichier.clone() != "affectations.json".to_string() {
+            if chemin_fichier.clone() != *"affectations.json" {
                 let vol_json = fs::read_to_string(format!(
                     "../site/dossier_de_travail/{}/{}/{}/{}",
                     annee,
