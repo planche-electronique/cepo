@@ -26,7 +26,7 @@ fn main() {
     // creation du dossier de travail si besoin
     if !(Path::new("../site/dossier_de_travail").exists()) {
         log::info!("Création du dossier de travail.");
-        fs::create_dir(format!("../site/dossier_de_travail")).unwrap();
+        fs::create_dir("../site/dossier_de_travail".to_string()).unwrap();
         log::info!("Dossier de travail créé.");
     }
 
@@ -120,8 +120,8 @@ fn gestion_connexion(
                 );
                 let date_str = &nom_fichier[12..23];
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
-                
-                let vols :Vec<Vol> = Vec::du(date);             
+
+                let vols: Vec<Vol> = Vec::du(date);
                 vols.vers_json()
 
             //fichier de vols "émulé"
