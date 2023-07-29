@@ -119,7 +119,7 @@ impl VolJson for Vec<Vol> {
         //pour chaque vol on ajoute sa version json a vols_str et on rajoute une virgule
         for vol in self {
             vols_str.push_str(vol.vers_json().as_str());
-            vols_str.push_str(",");
+            vols_str.push(',');
         }
         vols_str = vols_str[0..(vols_str.len() - 1)].to_string(); // on enleve la virgule de trop
         vols_str.push_str("\n]");

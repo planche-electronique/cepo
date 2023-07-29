@@ -95,7 +95,7 @@ impl MiseAJourJson for Vec<MiseAJour> {
         if string != *"[" {
             string.pop();
         }
-        string.push_str("]");
+        string.push(']');
         string
     }
 }
