@@ -242,14 +242,14 @@ impl MettreAJour for Planche {
                         "pilote2" => vol.pilote2 = mise_a_jour.nouvelle_valeur.clone(),
                         "decollage" => {
                             vol.decollage = NaiveTime::parse_from_str(
-                                format!("{}", mise_a_jour.nouvelle_valeur.clone()).as_str(),
+                                &mise_a_jour.nouvelle_valeur.clone(),
                                 "%H:%M",
                             )
                             .unwrap();
                         }
                         "atterissage" => {
                             vol.atterissage = NaiveTime::parse_from_str(
-                                format!("{}", mise_a_jour.nouvelle_valeur.clone()).as_str(),
+                                &mise_a_jour.nouvelle_valeur.clone(),
                                 "%H:%M",
                             )
                             .unwrap();
