@@ -32,10 +32,10 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
                             let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
                             //teste les différentes valeurs qui peuvent être mises a jour
                             if ancien_vol.decollage == heure_default {
-                                (*ancien_vol).decollage = nouveau_vol.decollage;
+                                ancien_vol.decollage = nouveau_vol.decollage;
                             }
                             if ancien_vol.atterissage == heure_default {
-                                (*ancien_vol).atterissage = nouveau_vol.atterissage;
+                                ancien_vol.atterissage = nouveau_vol.atterissage;
                             }
                         } else if nouveau_vol.aeronef == ancien_vol.aeronef {
                             if priorite_prochain_vol != 0 {
