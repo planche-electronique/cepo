@@ -9,6 +9,12 @@ pub struct MiseAJour {
     pub heure: NaiveTime,
 }
 
+impl Default for MiseAJour {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MiseAJour {
     pub fn new() -> Self {
         MiseAJour {
