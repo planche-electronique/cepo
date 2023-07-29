@@ -22,8 +22,9 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
 
                 let mut rang_prochain_vol = 0;
                 let mut priorite_prochain_vol = 0;
-                let mut rang_nouveau_vol = 0;
-                for nouveau_vol in nouvelle_planche.vols.clone() {
+                for (mut rang_nouveau_vol, nouveau_vol) in
+                    nouvelle_planche.vols.clone().into_iter().enumerate()
+                {
                     let mut existe = false;
                     for ancien_vol in &mut ancienne_planche.vols {
                         // si on est sur le meme vol
@@ -155,9 +156,8 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
             Vec::new()
         }
     };
-    let mut index = 0;
     let immatriculations = crate::parametres_liste_depuis_json("immatriculations.json");
-    for vol_json in vols_json.clone() {
+    for (mut index, vol_json) in vols_json.clone().into_iter().enumerate() {
         index += 1;
 
         // on recupere tous les champs nécessaires
@@ -201,7 +201,7 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
         .to_string();
 
         vols.push(Vol {
-            numero_ogn: index,
+            numero_ogn: index as i32,
             code_decollage,
             machine_decollage,
             decolleur: "".to_string(),
