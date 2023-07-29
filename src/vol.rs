@@ -17,6 +17,23 @@ pub struct Vol {
     pub atterissage: NaiveTime,
 }
 
+impl Default for Vol {
+    fn default() -> Self {
+        Vol {
+            numero_ogn: 1,
+            code_decollage: String::from("T"),
+            machine_decollage: String::from("F-REMA"),
+            decolleur: String::from("YDL"),
+            aeronef: String::from("F-CERJ"),
+            code_vol: String::from("S"),
+            pilote1: String::from("Walt Disney"),
+            pilote2: String::default(),
+            decollage: NaiveTime::from_hms_opt(13, 0, 0).unwrap(),
+            atterissage: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
+        }
+    }
+}
+
 impl Vol {
     fn _new() -> Self {
         Vol {
@@ -30,21 +47,6 @@ impl Vol {
             pilote2: String::default(),
             decollage: NaiveTime::default(),
             atterissage: NaiveTime::default(),
-        }
-    }
-
-    pub fn default() -> Self {
-        Vol {
-            numero_ogn: 1,
-            code_decollage: String::from("T"),
-            machine_decollage: String::from("F-REMA"),
-            decolleur: String::from("YDL"),
-            aeronef: String::from("F-CERJ"),
-            code_vol: String::from("S"),
-            pilote1: String::from("Walt Disney"),
-            pilote2: String::default(),
-            decollage: NaiveTime::from_hms_opt(13, 0, 0).unwrap(),
-            atterissage: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         }
     }
 
