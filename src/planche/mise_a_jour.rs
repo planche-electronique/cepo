@@ -87,16 +87,16 @@ pub trait MiseAJourJson {
 impl MiseAJourJson for Vec<MiseAJour> {
     fn vers_json(&self) -> String {
         let mut string = String::new();
-        string.push_str("[");
+        string.push('[');
         for maj in self {
             string.push_str(maj.vers_json().as_str());
-            string.push_str(",")
+            string.push(',')
         }
-        if string != String::from("[") {
+        if string != *"[" {
             string.pop();
         }
         string.push_str("]");
-        return string;
+        string
     }
 }
 
