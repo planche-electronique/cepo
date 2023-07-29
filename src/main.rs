@@ -12,8 +12,6 @@ use serveur::planche::{MettreAJour, Planche};
 use serveur::vol::{Vol, VolJson};
 
 use chrono::NaiveDate;
-use env_logger;
-use log;
 use simple_http_parser::request;
 
 fn main() {
