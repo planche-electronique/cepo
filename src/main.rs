@@ -82,7 +82,7 @@ fn gestion_connexion(
     let corps_json = requete_parse.body.clone();
     let mut nom_fichier = chemin.to_string();
 
-    if nom_fichier == String::from("/") {
+    if nom_fichier == *"/" {
         nom_fichier = String::from("/index.html");
     }
     nom_fichier.insert_str(0, "../site");
@@ -98,7 +98,7 @@ fn gestion_connexion(
     let contenu: String = match requete_parse.method {
         request::HTTPMethod::GET => {
             //fichier de majs
-            if nom_fichier == "../site/majs".to_string() {
+            if nom_fichier == *"../site/majs" {
                 headers.push_str(
                     "Content-Type: application/json\
                     \nAccess-Control-Allow-Headers: origin, content-type\
@@ -138,16 +138,12 @@ fn gestion_connexion(
 
             //fichier de vols "émulé"
             } else if &nom_fichier[8..12] != "vols" {
-                if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string()
-                    == ".json".to_string()
-                {
+                if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()] == *".json" {
                     headers.push_str(
                         "Content-Type: application/json\
                         \nAccess-Control-Allow-Origin: *",
                     );
-                } else if nom_fichier[nom_fichier.len() - 3..nom_fichier.len()].to_string()
-                    == ".js".to_string()
-                {
+                } else if nom_fichier[nom_fichier.len() - 3..nom_fichier.len()] == *".js" {
                     headers.push_str(
                         "Content-Type: application/javascript\
                         \nAccess-Control-Allow-Origin: *",
