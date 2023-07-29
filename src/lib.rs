@@ -31,7 +31,7 @@ pub fn nom_fichier_date(nombre: i32) -> String {
     if nombre > 9 {
         nombre.to_string()
     } else {
-        format!("0{}", nombre.to_string())
+        format!("0{}", nombre)
     }
 }
 
