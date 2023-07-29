@@ -75,7 +75,7 @@ fn gestion_connexion(
     let mut tampon = [0; 16384];
     flux.read(&mut tampon).unwrap();
 
-    let requete_brute = String::from_utf8_lossy(&tampon).to_owned();
+    let requete_brute = String::from_utf8_lossy(&tampon).into_owned();
     let requete_parse = request::Request::from(&requete_brute)
         .expect("La requête n'a pas pu être parsé correctement.");
     let chemin = requete_parse.path;
