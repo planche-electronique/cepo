@@ -224,10 +224,10 @@ impl MettreAJour for Planche {
                 atterissage: NaiveTime::default(),
             });
         } else if mise_a_jour.champ_mis_a_jour.clone() == "supprimer" {
-            vols.retain(|vol| vol.numero_ogn != mise_a_jour.numero_ogn as i32);
+            vols.retain(|vol| vol.numero_ogn != mise_a_jour.numero_ogn);
         } else {
             for vol in &mut vols {
-                if vol.numero_ogn == mise_a_jour.numero_ogn as i32 {
+                if vol.numero_ogn == mise_a_jour.numero_ogn {
                     match mise_a_jour.champ_mis_a_jour.clone().as_str() {
                         "code_decollage" => {
                             vol.code_decollage = mise_a_jour.nouvelle_valeur.clone()
