@@ -260,7 +260,7 @@ impl MettreAJour for Planche {
                     }
                 }
             }
-            if mise_a_jour.numero_ogn as i32 == 0 {
+            if mise_a_jour.numero_ogn == 0 {
                 match mise_a_jour.champ_mis_a_jour.as_str() {
                     "pilote_tr" => self.pilote_tr = mise_a_jour.nouvelle_valeur,
                     "treuil" => self.treuil = mise_a_jour.nouvelle_valeur,
