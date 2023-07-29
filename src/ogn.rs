@@ -94,7 +94,7 @@ pub fn requete_ogn(date: NaiveDate) -> Result<String, reqwest::Error> {
     let reponse = reqwest::blocking::get(format!(
         "http://flightbook.glidernet.org/api/logbook/{}/{}",
         airfield_code,
-        date.format("%Y-%m-%d").to_string()
+        date.format("%Y-%m-%d")
     ));
     match reponse {
         Ok(reponse_developpee) => {
@@ -177,8 +177,7 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
             .take_string()
             .unwrap_or_else(|| "00h00".to_string())
             .clone();
-        let decollage =
-            NaiveTime::parse_from_str(format!("{}", start_str).as_str(), "%Hh%M").unwrap();
+        let decollage = NaiveTime::parse_from_str(&start_str, "%Hh%M").unwrap();
         //atterissage
         let stop_json = vol_json["stop"].clone();
         let stop_str = match stop_json {
