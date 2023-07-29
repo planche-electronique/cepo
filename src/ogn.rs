@@ -22,6 +22,7 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
 
                 let mut rang_prochain_vol = 0;
                 let mut priorite_prochain_vol = 0;
+                #[allow(unused_assignments)]
                 for (mut rang_nouveau_vol, nouveau_vol) in
                     nouvelle_planche.vols.clone().into_iter().enumerate()
                 {
