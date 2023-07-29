@@ -28,13 +28,11 @@ pub fn parametres_liste_depuis_json(fichier: &str) -> Vec<String> {
 }
 
 pub fn nom_fichier_date(nombre: i32) -> String {
-    let nombre_str: String;
     if nombre > 9 {
-        nombre_str = nombre.to_string();
+        nombre.to_string()
     } else {
-        nombre_str = format!("0{}", nombre.to_string());
+        format!("0{}", nombre.to_string())
     }
-    nombre_str
 }
 
 pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
