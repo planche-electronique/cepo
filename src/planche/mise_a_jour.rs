@@ -62,7 +62,7 @@ impl MiseAJour {
         Ok(())
     }
 
-    pub fn vers_json(self: &Self) -> String {
+    pub fn vers_json(&self) -> String {
         json::object! {
             numero_ogn: self.numero_ogn,
             date: *self.date.format("%Y/%m/%d").to_string(),
@@ -75,11 +75,11 @@ impl MiseAJour {
 }
 
 pub trait MiseAJourJson {
-    fn vers_json(self: &Self) -> String;
+    fn vers_json(&self) -> String;
 }
 
 impl MiseAJourJson for Vec<MiseAJour> {
-    fn vers_json(self: &Self) -> String {
+    fn vers_json(&self) -> String {
         let mut string = String::new();
         string.push_str("[");
         for maj in self {
