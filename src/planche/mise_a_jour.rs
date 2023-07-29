@@ -110,7 +110,7 @@ impl MiseAJourObsoletes for Vec<MiseAJour> {
         let mut i = 0;
         while i < self.len() {
             if (heure_actuelle - self[i].heure) > temps {
-                self.remove(i as usize);
+                self.remove(i);
             } else {
                 i += 1;
             }
