@@ -14,10 +14,13 @@ pub struct Appareil {
 
 pub fn parametres_liste_depuis_json(fichier: &str) -> Vec<String> {
     log::info!("Lecture de la liste de paramètres {}", fichier);
-    let contenu_fichier = fs::read_to_string(format!("../site/{}", fichier)).expect(&format!(
-        "Probleme lors de la leture du fichier : {}",
-        fichier
-    ));
+    let contenu_fichier =
+        fs::read_to_string(format!("../site/{}", fichier)).unwrap_or_else(|err| {
+            panic!(
+                "Probleme lors de la leture du fichier {} : {}",
+                fichier, err
+            );
+        });
     let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
     let iter_fichier = fichier_parse.members();
     let mut elements = Vec::new();
