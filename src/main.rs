@@ -73,7 +73,7 @@ fn gestion_connexion(
     requetes_en_cours.clone().incrementer(adresse.clone());
 
     let mut tampon = [0; 16384];
-    flux.read(&mut tampon).unwrap();
+    flux.read_exact(&mut tampon).unwrap();
 
     let requete_brute = String::from_utf8_lossy(&tampon).into_owned();
     let requete_parse = request::Request::from(&requete_brute)
@@ -236,7 +236,7 @@ fn gestion_connexion(
         contenu
     );
 
-    flux.write(reponse.as_bytes()).unwrap();
+    flux.write_all(reponse.as_bytes()).unwrap();
     flux.flush().unwrap();
 
     requetes_en_cours.clone().decrementer(adresse);
