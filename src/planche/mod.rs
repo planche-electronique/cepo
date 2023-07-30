@@ -27,7 +27,7 @@ impl Default for Planche {
 }
 
 impl Planche {
-    pub fn planche_du(date: NaiveDate) -> Planche {
+    pub fn du(date: NaiveDate) -> Planche {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();

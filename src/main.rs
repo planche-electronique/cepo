@@ -30,7 +30,7 @@ fn main() {
 
     let planche_arc: Arc<Mutex<Planche>> = Arc::new(Mutex::new(Planche::new()));
     let mut planche_lock = planche_arc.lock().unwrap();
-    *planche_lock = Planche::planche_du(date_aujourdhui);
+    *planche_lock = Planche::du(date_aujourdhui);
     drop(planche_lock);
 
     let majs_arc: Arc<Mutex<Vec<MiseAJour>>> = Arc::new(Mutex::new(Vec::new()));
@@ -183,7 +183,7 @@ fn gestion_connexion(
                 drop(majs_lock);
 
                 if mise_a_jour.date != date_aujourdhui {
-                    let mut planche_voulue = Planche::planche_du(mise_a_jour.date);
+                    let mut planche_voulue = Planche::du(mise_a_jour.date);
                     planche_voulue.mettre_a_jour(mise_a_jour);
                     planche_voulue.enregistrer();
                 } else {
