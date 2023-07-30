@@ -22,8 +22,10 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
 
                 let mut rang_prochain_vol = 0;
                 let mut priorite_prochain_vol = 0;
-                let mut rang_nouveau_vol = 0;
-                for nouveau_vol in nouvelle_planche.vols.clone() {
+                #[allow(unused_assignments)]
+                for (mut rang_nouveau_vol, nouveau_vol) in
+                    nouvelle_planche.vols.clone().into_iter().enumerate()
+                {
                     let mut existe = false;
                     for ancien_vol in &mut ancienne_planche.vols {
                         // si on est sur le meme vol
@@ -32,10 +34,10 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
                             let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
                             //teste les différentes valeurs qui peuvent être mises a jour
                             if ancien_vol.decollage == heure_default {
-                                (*ancien_vol).decollage = nouveau_vol.decollage;
+                                ancien_vol.decollage = nouveau_vol.decollage;
                             }
                             if ancien_vol.atterissage == heure_default {
-                                (*ancien_vol).atterissage = nouveau_vol.atterissage;
+                                ancien_vol.atterissage = nouveau_vol.atterissage;
                             }
                         } else if nouveau_vol.aeronef == ancien_vol.aeronef {
                             if priorite_prochain_vol != 0 {
@@ -94,7 +96,7 @@ pub fn requete_ogn(date: NaiveDate) -> Result<String, reqwest::Error> {
     let reponse = reqwest::blocking::get(format!(
         "http://flightbook.glidernet.org/api/logbook/{}/{}",
         airfield_code,
-        date.format("%Y-%m-%d").to_string()
+        date.format("%Y-%m-%d")
     ));
     match reponse {
         Ok(reponse_developpee) => {
@@ -155,9 +157,8 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
             Vec::new()
         }
     };
-    let mut index = 0;
     let immatriculations = crate::parametres_liste_depuis_json("immatriculations.json");
-    for vol_json in vols_json.clone() {
+    for (mut index, vol_json) in vols_json.clone().into_iter().enumerate() {
         index += 1;
 
         // on recupere tous les champs nécessaires
@@ -177,8 +178,7 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
             .take_string()
             .unwrap_or_else(|| "00h00".to_string())
             .clone();
-        let decollage =
-            NaiveTime::parse_from_str(format!("{}", start_str).as_str(), "%Hh%M").unwrap();
+        let decollage = NaiveTime::parse_from_str(&start_str, "%Hh%M").unwrap();
         //atterissage
         let stop_json = vol_json["stop"].clone();
         let stop_str = match stop_json {
@@ -202,7 +202,7 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
         .to_string();
 
         vols.push(Vol {
-            numero_ogn: index,
+            numero_ogn: index as i32,
             code_decollage,
             machine_decollage,
             decolleur: "".to_string(),

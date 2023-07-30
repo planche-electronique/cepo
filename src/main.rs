@@ -12,8 +12,6 @@ use serveur::planche::{MettreAJour, Planche};
 use serveur::vol::{Vol, VolJson};
 
 use chrono::NaiveDate;
-use env_logger;
-use log;
 use simple_http_parser::request;
 
 fn main() {
@@ -26,7 +24,7 @@ fn main() {
     // creation du dossier de travail si besoin
     if !(Path::new("../site/dossier_de_travail").exists()) {
         log::info!("Création du dossier de travail.");
-        fs::create_dir(format!("../site/dossier_de_travail")).unwrap();
+        fs::create_dir("../site/dossier_de_travail").unwrap();
         log::info!("Dossier de travail créé.");
     }
 
@@ -75,16 +73,16 @@ fn gestion_connexion(
     requetes_en_cours.clone().incrementer(adresse.clone());
 
     let mut tampon = [0; 16384];
-    flux.read(&mut tampon).unwrap();
+    flux.read_exact(&mut tampon).unwrap();
 
-    let requete_brute = String::from_utf8_lossy(&tampon).to_owned();
+    let requete_brute = String::from_utf8_lossy(&tampon).into_owned();
     let requete_parse = request::Request::from(&requete_brute)
         .expect("La requête n'a pas pu être parsé correctement.");
     let chemin = requete_parse.path;
     let corps_json = requete_parse.body.clone();
     let mut nom_fichier = chemin.to_string();
 
-    if nom_fichier == String::from("/") {
+    if nom_fichier == *"/" {
         nom_fichier = String::from("/index.html");
     }
     nom_fichier.insert_str(0, "../site");
@@ -100,7 +98,7 @@ fn gestion_connexion(
     let contenu: String = match requete_parse.method {
         request::HTTPMethod::GET => {
             //fichier de majs
-            if nom_fichier == "../site/majs".to_string() {
+            if nom_fichier == *"../site/majs" {
                 headers.push_str(
                     "Content-Type: application/json\
                     \nAccess-Control-Allow-Headers: origin, content-type\
@@ -120,8 +118,8 @@ fn gestion_connexion(
                 );
                 let date_str = &nom_fichier[12..23];
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
-                
-                let vols :Vec<Vol> = Vec::du(date);             
+
+                let vols: Vec<Vol> = Vec::du(date);
                 vols.vers_json()
 
             //fichier de vols "émulé"
@@ -140,16 +138,12 @@ fn gestion_connexion(
 
             //fichier de vols "émulé"
             } else if &nom_fichier[8..12] != "vols" {
-                if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()].to_string()
-                    == ".json".to_string()
-                {
+                if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()] == *".json" {
                     headers.push_str(
                         "Content-Type: application/json\
                         \nAccess-Control-Allow-Origin: *",
                     );
-                } else if nom_fichier[nom_fichier.len() - 3..nom_fichier.len()].to_string()
-                    == ".js".to_string()
-                {
+                } else if nom_fichier[nom_fichier.len() - 3..nom_fichier.len()] == *".js" {
                     headers.push_str(
                         "Content-Type: application/javascript\
                         \nAccess-Control-Allow-Origin: *",
@@ -242,7 +236,7 @@ fn gestion_connexion(
         contenu
     );
 
-    flux.write(reponse.as_bytes()).unwrap();
+    flux.write_all(reponse.as_bytes()).unwrap();
     flux.flush().unwrap();
 
     requetes_en_cours.clone().decrementer(adresse);

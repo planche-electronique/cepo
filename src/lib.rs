@@ -1,4 +1,3 @@
-use log;
 use std::fs;
 use std::path::Path;
 
@@ -15,8 +14,13 @@ pub struct Appareil {
 
 pub fn parametres_liste_depuis_json(fichier: &str) -> Vec<String> {
     log::info!("Lecture de la liste de paramètres {}", fichier);
-    let contenu_fichier = fs::read_to_string(format!("../site/{}", fichier))
-        .expect(format!("Probleme lors de la leture du fichier : {}", fichier).as_str());
+    let contenu_fichier =
+        fs::read_to_string(format!("../site/{}", fichier)).unwrap_or_else(|err| {
+            panic!(
+                "Probleme lors de la leture du fichier {} : {}",
+                fichier, err
+            );
+        });
     let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
     let iter_fichier = fichier_parse.members();
     let mut elements = Vec::new();
@@ -27,13 +31,11 @@ pub fn parametres_liste_depuis_json(fichier: &str) -> Vec<String> {
 }
 
 pub fn nom_fichier_date(nombre: i32) -> String {
-    let nombre_str: String;
     if nombre > 9 {
-        nombre_str = nombre.to_string();
+        nombre.to_string()
     } else {
-        nombre_str = format!("0{}", nombre.to_string());
+        format!("0{}", nombre)
     }
-    nombre_str
 }
 
 pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {

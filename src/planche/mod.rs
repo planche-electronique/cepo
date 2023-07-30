@@ -4,8 +4,8 @@ use crate::ogn::{requete_ogn, traitement_requete_ogn};
 use crate::vol::{Vol, VolJson};
 use crate::{creer_chemin_jour, nom_fichier_date};
 use chrono::{Datelike, NaiveDate, NaiveTime};
-use log;
 use json;
+use log;
 pub use mise_a_jour::MiseAJour;
 use std::fs;
 
@@ -18,6 +18,12 @@ pub struct Planche {
     pub pilote_rq: String,  // parmi pilotes_rq
     pub remorqueur: String, // parmi remorqueurs
     pub chef_piste: String, // parmi pilotes
+}
+
+impl Default for Planche {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Planche {
@@ -57,16 +63,24 @@ impl Planche {
         let jour_str = nom_fichier_date(jour as i32);
 
         let vols: Vec<Vol> = Vec::du(date);
-        let affectations_str = fs::read_to_string(format!("../site/dossier_de_travail/{}/{}/{}/affectations.json",
-            annee, mois_str, jour_str)).unwrap();
+        let affectations_str = fs::read_to_string(format!(
+            "../site/dossier_de_travail/{}/{}/{}/affectations.json",
+            annee, mois_str, jour_str
+        ))
+        .unwrap();
         let affectations_json = json::parse(&affectations_str).unwrap();
         let pilote_tr = affectations_json["pilote_tr"].as_str().unwrap().to_string();
         let treuil = affectations_json["treuil"].as_str().unwrap().to_string();
         let pilote_rq = affectations_json["pilote_rq"].as_str().unwrap().to_string();
-        let remorqueur = affectations_json["remorqueur"].as_str().unwrap().to_string();
-        let chef_piste = affectations_json["chef_piste"].as_str().unwrap().to_string();
-        
-        
+        let remorqueur = affectations_json["remorqueur"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let chef_piste = affectations_json["chef_piste"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
         Planche {
             date,
             vols,
@@ -119,28 +133,35 @@ impl Planche {
 
             if fichier != vol.vers_json() {
                 fs::write(chemin, vol.vers_json()).unwrap_or_else(|err| {
-                    log::error!("Impossible d'écrire le fichier du jour {}/{}/{} et d'index {} : {}", annee, mois_str, jour_str, index, err);
+                    log::error!(
+                        "Impossible d'écrire le fichier du jour {}/{}/{} et d'index {} : {}",
+                        annee,
+                        mois_str,
+                        jour_str,
+                        index,
+                        err
+                    );
                 });
             }
             index += 1;
         }
-        
+
         let chemin = format!(
             "../site/dossier_de_travail/{}/{}/{}/affectations.json",
             annee, mois_str, jour_str
         );
         let affectations_fichier = fs::read_to_string(chemin.clone()).unwrap_or_default();
-        let affectations = json::object!{
+        let affectations = json::object! {
             "pilote_tr": self.pilote_tr.clone(),
             "treuil": self.treuil.clone(),
             "pilote_rq": self.pilote_rq.clone(),
             "remorqueur": self.remorqueur.clone(),
-            "chef_piste": self.chef_piste.clone(),        
+            "chef_piste": self.chef_piste.clone(),
         };
         if json::stringify(affectations.clone()) != affectations_fichier {
             fs::write(chemin.clone(), json::stringify(affectations.clone())).unwrap_or_else(|err| {
                 log::error!("Impossible d'écrire les affectations : {}", err);
-            }) 
+            })
         }
     }
 
@@ -173,9 +194,9 @@ impl Planche {
         json.push_str(&vols_json);
         json.push_str(", \n \"affectations\": ");
         json.push_str(&reste_json);
-        json.push_str("\n");
-        json.push_str("}");
-        return json;
+        json.push('\n');
+        json.push('}');
+        json
     }
 }
 
@@ -191,7 +212,7 @@ impl MettreAJour for Planche {
             log::error!("Mise a jour impossible: les dates ne sont pas les mêmes !");
         } else if mise_a_jour.champ_mis_a_jour.clone() == "nouveau" {
             vols.push(Vol {
-                numero_ogn: mise_a_jour.numero_ogn as i32,
+                numero_ogn: mise_a_jour.numero_ogn,
                 aeronef: mise_a_jour.nouvelle_valeur.clone(),
                 code_vol: String::new(),
                 code_decollage: String::new(),
@@ -203,10 +224,10 @@ impl MettreAJour for Planche {
                 atterissage: NaiveTime::default(),
             });
         } else if mise_a_jour.champ_mis_a_jour.clone() == "supprimer" {
-            vols.retain(|vol| vol.numero_ogn != mise_a_jour.numero_ogn as i32);
+            vols.retain(|vol| vol.numero_ogn != mise_a_jour.numero_ogn);
         } else {
             for vol in &mut vols {
-                if vol.numero_ogn == mise_a_jour.numero_ogn as i32 {
+                if vol.numero_ogn == mise_a_jour.numero_ogn {
                     match mise_a_jour.champ_mis_a_jour.clone().as_str() {
                         "code_decollage" => {
                             vol.code_decollage = mise_a_jour.nouvelle_valeur.clone()
@@ -221,14 +242,14 @@ impl MettreAJour for Planche {
                         "pilote2" => vol.pilote2 = mise_a_jour.nouvelle_valeur.clone(),
                         "decollage" => {
                             vol.decollage = NaiveTime::parse_from_str(
-                                format!("{}", mise_a_jour.nouvelle_valeur.clone()).as_str(),
+                                &mise_a_jour.nouvelle_valeur.clone(),
                                 "%H:%M",
                             )
                             .unwrap();
                         }
                         "atterissage" => {
                             vol.atterissage = NaiveTime::parse_from_str(
-                                format!("{}", mise_a_jour.nouvelle_valeur.clone()).as_str(),
+                                &mise_a_jour.nouvelle_valeur.clone(),
                                 "%H:%M",
                             )
                             .unwrap();
@@ -239,7 +260,7 @@ impl MettreAJour for Planche {
                     }
                 }
             }
-            if mise_a_jour.numero_ogn as i32 == 0 {
+            if mise_a_jour.numero_ogn == 0 {
                 match mise_a_jour.champ_mis_a_jour.as_str() {
                     "pilote_tr" => self.pilote_tr = mise_a_jour.nouvelle_valeur,
                     "treuil" => self.treuil = mise_a_jour.nouvelle_valeur,

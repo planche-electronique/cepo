@@ -29,7 +29,7 @@ impl VariationRequete for Vec<Client> {
                     log::info!("pas plus de requêtes pour {}", adresse);
                 }
             }
-            if adresse_existe == false {
+            if !adresse_existe {
                 self.push(Client {
                     adresse: adresse.to_string(),
                     requetes_en_cours: 1,
