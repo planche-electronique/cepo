@@ -1,6 +1,5 @@
 use std::fs;
 use std::io::prelude::*;
-use std::net::{TcpListener, TcpStream};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -14,12 +13,28 @@ use serveur::vol::{Vol, VolJson};
 use chrono::NaiveDate;
 use simple_http_parser::request;
 
-fn main() {
+//hyper utils
+use std::convert::Infallible;
+use std::net::SocketAddr;
+
+use http_body_util::Full;
+use hyper::body::Bytes;
+use hyper::server::conn::http1;
+use hyper::service::service_fn;
+use hyper::{Request, Response};
+use hyper_util::rt::TokioIo;
+use tokio::net::TcpListener;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     env_logger::init();
+
     log::info!("Démarrage...");
     let date_aujourdhui = chrono::Local::now().date_naive();
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
-    let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
+    //let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
+    let adresse = SocketAddr::from(([127, 0, 0, 1], 7878));
+    let ecouteur = TcpListener::bind(adresse).await?;
 
     // creation du dossier de travail si besoin
     if !(Path::new("../site/dossier_de_travail").exists()) {
@@ -47,19 +62,41 @@ fn main() {
             thread_ogn(planche_thread);
         });
 
-    for flux in ecouteur.incoming() {
-        let flux = flux.unwrap();
-        let requetes_en_cours = requetes_en_cours.clone();
+    loop {
+        let (stream, _) = ecouteur.accept().await?;
 
-        let planche_arc = planche_arc.clone();
-        let majs_arc = majs_arc.clone();
+        let io = Tokio::new(stream);
 
-        let _ = thread::Builder::new()
-            .name("Gestion".to_string())
-            .spawn(move || {
-                gestion_connexion(flux, requetes_en_cours, planche_arc, majs_arc);
-            });
+        tokio::task::spawn(async move {
+            let flux = flux.unwrap();
+            let requetes_en_cours = requetes_en_cours.clone();
+
+            let planche_arc = planche_arc.clone();
+            let majs_arc = majs_arc.clone();
+            if let Err(e) = http1::Builder::new()
+                .serve_connection(io, service_fn(|req: Request<body>::Incoming| async move {
+                    gestion_connection(flux, requetes_en_cours, planche_arc, majs_arc);
+                }))
+                .await
+            {
+                log::error!("Erreur pour résoudre la connection: {e}");
+            }
+        })
     }
+
+    // for flux in ecouteur.incoming() {
+    //     let flux = flux.unwrap();
+    //     let requetes_en_cours = requetes_en_cours.clone();
+
+    //     let planche_arc = planche_arc.clone();
+    //     let majs_arc = majs_arc.clone();
+
+    //     let _ = thread::Builder::new()
+    //         .name("Gestion".to_string())
+    //         .spawn(move || {
+    //             gestion_connexion(flux, requetes_en_cours, planche_arc, majs_arc);
+    //         });
+    // }
 }
 
 fn gestion_connexion(
@@ -240,6 +277,10 @@ fn gestion_connexion(
     flux.flush().unwrap();
 
     requetes_en_cours.clone().decrementer(adresse);
+}
+
+async fn hello(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infaillible> {
+    Ok(Response::new(Full::new(Bytes::from("Hello world"))))
 }
 
 mod tests;
