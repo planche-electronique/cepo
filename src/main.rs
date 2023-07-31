@@ -18,12 +18,12 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 
 use http_body_util::Full;
-use hyper::body::Bytes;
+use hyper::body::{Bytes, Incoming};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Request, Response};
 use hyper_util::rt::TokioIo;
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -65,23 +65,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     loop {
         let (stream, _) = ecouteur.accept().await?;
 
-        let io = Tokio::new(stream);
+        let io = TokioIo::new(stream);
 
         tokio::task::spawn(async move {
-            let flux = flux.unwrap();
             let requetes_en_cours = requetes_en_cours.clone();
 
             let planche_arc = planche_arc.clone();
             let majs_arc = majs_arc.clone();
             if let Err(e) = http1::Builder::new()
-                .serve_connection(io, service_fn(|req: Request<body>::Incoming| async move {
-                    gestion_connection(flux, requetes_en_cours, planche_arc, majs_arc);
-                }))
+                .serve_connection(
+                    io,
+                    service_fn(|req: Request<Incoming>| async move {
+                        gestion_connexion(req, requetes_en_cours, planche_arc, majs_arc);
+                    }),
+                )
                 .await
             {
                 log::error!("Erreur pour résoudre la connection: {e}");
             }
-        })
+        });
     }
 
     // for flux in ecouteur.incoming() {
@@ -100,17 +102,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 }
 
 fn gestion_connexion(
-    mut flux: TcpStream,
+    req: Request<Incoming>,
     requetes_en_cours: Arc<Mutex<Vec<Client>>>,
     planche: Arc<Mutex<Planche>>,
     majs_arc: Arc<Mutex<Vec<MiseAJour>>>,
 ) {
-    let adresse = format!("{}", (flux.peer_addr().unwrap()));
+    let adresse = req.uri().path().to_string().clone();
 
     requetes_en_cours.clone().incrementer(adresse.clone());
 
-    let mut tampon = [0; 16384];
-    flux.read_exact(&mut tampon).unwrap();
+    let corps = req.body().poll_frame();
+    let cors_str = std::str::from_utf8(&corps);
 
     let requete_brute = String::from_utf8_lossy(&tampon).into_owned();
     let requete_parse = request::Request::from(&requete_brute)
@@ -273,13 +275,13 @@ fn gestion_connexion(
         contenu
     );
 
-    flux.write_all(reponse.as_bytes()).unwrap();
-    flux.flush().unwrap();
+    // flux.write_all(reponse.as_bytes()).unwrap();
+    // flux.flush().unwrap();
 
     requetes_en_cours.clone().decrementer(adresse);
 }
 
-async fn hello(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infaillible> {
+async fn hello(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
     Ok(Response::new(Full::new(Bytes::from("Hello world"))))
 }
 
