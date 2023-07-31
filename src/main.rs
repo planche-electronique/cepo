@@ -1,5 +1,4 @@
 use std::fs;
-use std::io::prelude::*;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -17,13 +16,8 @@ use simple_http_parser::request;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 
-use http_body_util::Full;
-use hyper::body::{Bytes, Incoming};
-use hyper::server::conn::http1;
-use hyper::service::service_fn;
-use hyper::{Request, Response};
-use hyper_util::rt::TokioIo;
-use tokio::net::{TcpListener, TcpStream};
+use hyper::service::{make_service_fn, service_fn};
+use hyper::{Body, Request, Response, Server};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -34,7 +28,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     //let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
     let adresse = SocketAddr::from(([127, 0, 0, 1], 7878));
-    let ecouteur = TcpListener::bind(adresse).await?;
 
     // creation du dossier de travail si besoin
     if !(Path::new("../site/dossier_de_travail").exists()) {
@@ -54,6 +47,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     log::info!("Serveur démarré.");
 
+    let faire_service = make_service_fn(|_conn| async {
+        Ok::<_, Infallible>(service_fn(|req| {
+            gestion_connexion(req, requetes_en_cours, planche_arc, majs_arc);
+        }))
+    });
+
     //on spawn le thread qui va s'occuper de ogn
     let _ = thread::Builder::new()
         .name("Thread OGN".to_string())
@@ -62,29 +61,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             thread_ogn(planche_thread);
         });
 
-    loop {
-        let (stream, _) = ecouteur.accept().await?;
+    let serveur = Server::bind(&adresse).serve(faire_service);
 
-        let io = TokioIo::new(stream);
-
-        tokio::task::spawn(async move {
-            let requetes_en_cours = requetes_en_cours.clone();
-
-            let planche_arc = planche_arc.clone();
-            let majs_arc = majs_arc.clone();
-            if let Err(e) = http1::Builder::new()
-                .serve_connection(
-                    io,
-                    service_fn(|req: Request<Incoming>| async move {
-                        gestion_connexion(req, requetes_en_cours, planche_arc, majs_arc);
-                    }),
-                )
-                .await
-            {
-                log::error!("Erreur pour résoudre la connection: {e}");
-            }
-        });
+    if let Err(e) = serveur.await {
+        log::error!("Erreur du serveur : {}", e);
     }
+
+    // loop {
+    //     let (stream, _) = ecouteur.accept().await?;
+
+    //     let io = TokioIo::new(stream);
+
+    //     tokio::task::spawn(async move {
+    //         let requetes_en_cours = requetes_en_cours.clone();
+
+    //         let planche_arc = planche_arc.clone();
+    //         let majs_arc = majs_arc.clone();
+    //         if let Err(e) = http1::Builder::new()
+    //             .serve_connection(
+    //                 io,
+    //                 service_fn(|req: Request<Incoming>| async move {
+    //                     gestion_connexion(req, requetes_en_cours, planche_arc, majs_arc);
+    //                 }),
+    //             )
+    //             .await
+    //         {
+    //             log::error!("Erreur pour résoudre la connection: {e}");
+    //         }
+    //     });
+    // }
 
     // for flux in ecouteur.incoming() {
     //     let flux = flux.unwrap();
@@ -102,11 +107,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 }
 
 fn gestion_connexion(
-    req: Request<Incoming>,
+    req: Request<Body>,
     requetes_en_cours: Arc<Mutex<Vec<Client>>>,
     planche: Arc<Mutex<Planche>>,
     majs_arc: Arc<Mutex<Vec<MiseAJour>>>,
-) {
+) -> Result<Response<Body>, Infallible> {
     let adresse = req.uri().path().to_string().clone();
 
     requetes_en_cours.clone().incrementer(adresse.clone());
