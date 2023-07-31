@@ -16,7 +16,9 @@ use simple_http_parser::request;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 
+use hyper::header::*;
 use hyper::service::{make_service_fn, service_fn};
+use hyper::{header, Method, StatusCode};
 use hyper::{Body, Request, Response, Server};
 
 #[tokio::main]
@@ -47,11 +49,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     log::info!("Serveur démarré.");
 
-    let faire_service = make_service_fn(|_conn| async {
-        Ok::<_, Infallible>(service_fn(|req| {
-            gestion_connexion(req, requetes_en_cours, planche_arc, majs_arc);
-        }))
-    });
+    // let service = make_service_fn(|_conn| async {
+    //     Ok::<_, hyper::Error>(service_fn(move |req: Request<Body>| async move {
+    //         gestion_connexion(req, requetes_en_cours, planche_arc, majs_arc);
+    //     }))
+    // });
+    let service = make_service_fn(|_conn| async { Ok::<_, Infallible>(service_fn(hello)) });
 
     //on spawn le thread qui va s'occuper de ogn
     let _ = thread::Builder::new()
@@ -61,157 +64,124 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             thread_ogn(planche_thread);
         });
 
-    let serveur = Server::bind(&adresse).serve(faire_service);
-
-    if let Err(e) = serveur.await {
-        log::error!("Erreur du serveur : {}", e);
-    }
-
-    // loop {
-    //     let (stream, _) = ecouteur.accept().await?;
-
-    //     let io = TokioIo::new(stream);
-
-    //     tokio::task::spawn(async move {
-    //         let requetes_en_cours = requetes_en_cours.clone();
-
-    //         let planche_arc = planche_arc.clone();
-    //         let majs_arc = majs_arc.clone();
-    //         if let Err(e) = http1::Builder::new()
-    //             .serve_connection(
-    //                 io,
-    //                 service_fn(|req: Request<Incoming>| async move {
-    //                     gestion_connexion(req, requetes_en_cours, planche_arc, majs_arc);
-    //                 }),
-    //             )
-    //             .await
-    //         {
-    //             log::error!("Erreur pour résoudre la connection: {e}");
-    //         }
-    //     });
-    // }
-
-    // for flux in ecouteur.incoming() {
-    //     let flux = flux.unwrap();
-    //     let requetes_en_cours = requetes_en_cours.clone();
-
-    //     let planche_arc = planche_arc.clone();
-    //     let majs_arc = majs_arc.clone();
-
-    //     let _ = thread::Builder::new()
-    //         .name("Gestion".to_string())
-    //         .spawn(move || {
-    //             gestion_connexion(flux, requetes_en_cours, planche_arc, majs_arc);
-    //         });
-    // }
+    let serveur = Server::bind(&adresse).serve(service);
+    serveur.await?;
+    Ok(())
 }
 
-fn gestion_connexion(
+async fn gestion_connexion(
     req: Request<Body>,
     requetes_en_cours: Arc<Mutex<Vec<Client>>>,
     planche: Arc<Mutex<Planche>>,
     majs_arc: Arc<Mutex<Vec<MiseAJour>>>,
-) -> Result<Response<Body>, Infallible> {
+) -> Result<Response<Body>, hyper::Error> {
     let adresse = req.uri().path().to_string().clone();
 
     requetes_en_cours.clone().incrementer(adresse.clone());
 
-    let corps = req.body().poll_frame();
-    let cors_str = std::str::from_utf8(&corps);
+    let chemin = format!("../site/{}", req.uri().path());
+    let (parties, body) = req.into_parts();
+    let corps_str = std::str::from_utf8(&hyper::body::to_bytes(body).await?)
+        .unwrap()
+        .to_string();
 
-    let requete_brute = String::from_utf8_lossy(&tampon).into_owned();
-    let requete_parse = request::Request::from(&requete_brute)
-        .expect("La requête n'a pas pu être parsé correctement.");
-    let chemin = requete_parse.path;
-    let corps_json = requete_parse.body.clone();
-    let mut nom_fichier = chemin.to_string();
-
-    if nom_fichier == *"/" {
-        nom_fichier = String::from("/index.html");
-    }
-    nom_fichier.insert_str(0, "../site");
     log::info!(
         "{} : requete du fichier {}",
         adresse.clone(),
-        nom_fichier.clone()
+        chemin.clone()
     );
 
-    let mut ligne_statut = "HTTP/1.1 200 OK";
-    let mut headers = String::new();
+    let mut reponse = Response::new(Body::empty());
 
-    let contenu: String = match requete_parse.method {
-        request::HTTPMethod::GET => {
-            //fichier de majs
-            if nom_fichier == *"../site/majs" {
-                headers.push_str(
-                    "Content-Type: application/json\
-                    \nAccess-Control-Allow-Headers: origin, content-type\
-                    \nAccess-Control-Allow-Origin: *",
+    match parties.method {
+        Method::GET => {
+            if chemin == *"../site/majs" {
+                reponse
+                    .headers_mut()
+                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+                reponse.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_HEADERS,
+                    "content-type, origin".parse().unwrap(),
                 );
+                reponse
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
                 let mut majs_lock = majs_arc.lock().unwrap();
                 let majs = (*majs_lock).clone();
                 (*majs_lock).enlever_majs_obsoletes(chrono::Duration::minutes(5));
                 drop(majs_lock);
-                majs.vers_json()
-            // fichier de vols "émulé"
-            } else if &(nom_fichier[8..12]) == "vols" {
-                headers.push_str(
-                    "Content-Type: application/json\
-                    \nAccess-Control-Allow-Headers: origin, content-type\
-                    \nAccess-Control-Allow-Origin: *",
+                *reponse.body_mut() = Body::from(majs.vers_json());
+            } else if &(chemin[8..12]) == "vols" {
+                reponse
+                    .headers_mut()
+                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+                reponse.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_HEADERS,
+                    "content-type, origin".parse().unwrap(),
                 );
-                let date_str = &nom_fichier[12..23];
+                reponse
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+                let date_str = &chemin[12..23];
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
 
                 let vols: Vec<Vol> = Vec::du(date);
-                vols.vers_json()
+                *reponse.body_mut() = Body::from(vols.vers_json());
 
             //fichier de vols "émulé"
-            } else if &(nom_fichier[8..15]) == "planche" {
-                headers.push_str(
-                    "Content-Type: application/json\
-                    \nAccess-Control-Allow-Headers: origin, content-type\
-                    \nAccess-Control-Allow-Origin: *",
+            } else if &(chemin[8..15]) == "planche" {
+                reponse
+                    .headers_mut()
+                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+                reponse.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_HEADERS,
+                    "content-type, origin".parse().unwrap(),
                 );
-
+                reponse
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
                 //on recupere la liste de planche
                 let planche_lock = planche.lock().unwrap();
                 let clone_planche = (*planche_lock).clone();
                 drop(planche_lock);
-                clone_planche.vers_json()
+                *reponse.body_mut() = Body::from(clone_planche.vers_json());
 
             //fichier de vols "émulé"
-            } else if &nom_fichier[8..12] != "vols" {
-                if nom_fichier[nom_fichier.len() - 5..nom_fichier.len()] == *".json" {
-                    headers.push_str(
-                        "Content-Type: application/json\
-                        \nAccess-Control-Allow-Origin: *",
-                    );
-                } else if nom_fichier[nom_fichier.len() - 3..nom_fichier.len()] == *".js" {
-                    headers.push_str(
-                        "Content-Type: application/javascript\
-                        \nAccess-Control-Allow-Origin: *",
-                    );
+            } else if &chemin[8..12] != "vols" {
+                if chemin[chemin.len() - 5..chemin.len()] == *".json" {
+                    reponse
+                        .headers_mut()
+                        .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+                    reponse
+                        .headers_mut()
+                        .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+                } else if chemin[chemin.len() - 3..chemin.len()] == *".js" {
+                    reponse
+                        .headers_mut()
+                        .insert(CONTENT_TYPE, "application/javascript".parse().unwrap());
+                    reponse
+                        .headers_mut()
+                        .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
                 }
-                fs::read_to_string(format!("../site/{}", nom_fichier)).unwrap_or_else(|_| {
-                    ligne_statut = "HTTP/1.1 404 NOT FOUND";
-                    fs::read_to_string("../site/404.html").unwrap_or_else(|err| {
-                        log::info!("pas de 404.html !! : {}", err);
-                        "".to_string()
-                    })
-                })
-            } else {
-                "".to_string()
+                *reponse.body_mut() = Body::from(
+                    fs::read_to_string(format!("../site/{}", chemin)).unwrap_or_else(|_| {
+                        *reponse.status_mut() = StatusCode::NOT_FOUND;
+                        fs::read_to_string("../site/404.html").unwrap_or_else(|err| {
+                            log::info!("pas de 404.html !! : {}", err);
+                            "".to_string()
+                        })
+                    }),
+                );
             }
         }
 
-        request::HTTPMethod::POST => {
-            if nom_fichier == "../site/mise_a_jour" {
+        Method::POST => {
+            if chemin == "../site/mise_a_jour" {
                 // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
                 let mut mise_a_jour = MiseAJour::new();
                 let mut corps_json_nettoye = String::new(); //necessite de creer une string qui va contenir
                                                             //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
-                for char in corps_json.chars() {
+                for char in corps_str.chars() {
                     if char as u32 != 0 {
                         corps_json_nettoye.push_str(char.to_string().as_str());
                     }
@@ -236,58 +206,48 @@ fn gestion_connexion(
                     (*planche_lock).enregistrer();
                     drop(planche_lock);
                 }
-
-                ligne_statut = "HTTP/1.1 201 Created";
-
-                headers.push_str(
-                    "Content-Type: application/json\
-                    \nAccess-Control-Allow-Origin: *",
-                );
-
-                String::from("")
-            } else {
-                String::from("")
+                reponse
+                    .headers_mut()
+                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+                reponse
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
             }
         }
 
-        request::HTTPMethod::OPTIONS => {
-            if nom_fichier == "/mise_a_jour" {
+        Method::OPTIONS => {
+            if chemin == "/mise_a_jour" {
                 // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
-                ligne_statut = "HTTP/1.1 204 No Content";
-
-                headers.push_str(
-                    "Connection: keep-alive\
-                    \nAccess-Control-Allow-Origin: *\
-                    \nAccess-Control-Max-Age: 86400\
-                    \nAccess-Control-Allow-Methods: POST, OPTIONS\
-                    \nAccess-Control-Allow-headers: origin,  content-type",
+                *reponse.status_mut() = StatusCode::NO_CONTENT;
+                reponse
+                    .headers_mut()
+                    .insert(CONNECTION, "keep-alive".parse().unwrap());
+                reponse
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+                reponse
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_MAX_AGE, "86400".parse().unwrap());
+                reponse.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_METHODS,
+                    "POST, OPTIONS".parse().unwrap(),
                 );
-
-                String::from("")
-            } else {
-                String::from("")
+                reponse.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_HEADERS,
+                    "origin, content-type".parse().unwrap(),
+                );
             }
         }
-        _ => String::from(""),
+        _ => {
+            log::error!("Methode non supportée");
+        }
     };
 
-    let reponse = format!(
-        "{}\r\nContent-Length: {}\n\
-        {}\r\n\r\n{}",
-        ligne_statut,
-        contenu.len(),
-        headers,
-        contenu
-    );
-
-    // flux.write_all(reponse.as_bytes()).unwrap();
-    // flux.flush().unwrap();
-
     requetes_en_cours.clone().decrementer(adresse);
+    Ok(reponse)
 }
 
-async fn hello(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
-    Ok(Response::new(Full::new(Bytes::from("Hello world"))))
+async fn hello(_: Request<Body>) -> Result<Response<Body>, Infallible> {
+    Ok(Response::new(Body::from("Hello World!")))
 }
-
 mod tests;
