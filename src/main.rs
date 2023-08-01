@@ -54,7 +54,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //         gestion_connexion(req, requetes_en_cours, planche_arc, majs_arc);
     //     }))
     // });
-    let service = make_service_fn(|_conn| async { Ok::<_, Infallible>(service_fn(hello)) });
+    
+    let service = make_service_fn(|_conn| {
+        let requetes_en_cours = requetes_en_cours.clone();
+        let planche_arc = planche_arc.clone();
+        let majs_arc = majs_arc.clone();
+        
+        async move { 
+            Ok::<_, Infallible>(service_fn(move |req| {
+                gestion_connexion(req, requetes_en_cours.clone(), planche_arc.clone(), majs_arc.clone())
+            }))
+        }
+    });
 
     //on spawn le thread qui va s'occuper de ogn
     let _ = thread::Builder::new()
