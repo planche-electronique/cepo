@@ -39,9 +39,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     }
 
     let planche_arc: Arc<Mutex<Planche>> = Arc::new(Mutex::new(Planche::new()));
-    let mut planche_lock = planche_arc.lock().unwrap();
-    *planche_lock = Planche::du(date_aujourdhui);
-    drop(planche_lock);
+    {
+        let mut planche_lock = planche_arc.lock().unwrap();
+        *planche_lock = Planche::du(date_aujourdhui).await;
+    }
 
     let majs_arc: Arc<Mutex<Vec<MiseAJour>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -85,12 +86,12 @@ async fn gestion_connexion(
     requetes_en_cours: Arc<Mutex<Vec<Client>>>,
     planche: Arc<Mutex<Planche>>,
     majs_arc: Arc<Mutex<Vec<MiseAJour>>>,
-) -> Result<Response<Body>, hyper::Error> {
+) -> Result<Response<Body>, Box<dyn std::error::Error + Send + Sync>> {
     let adresse = req.uri().path().to_string().clone();
 
     requetes_en_cours.clone().incrementer(adresse.clone());
 
-    let chemin = format!("../site/{}", req.uri().path());
+    let chemin = format!("../site{}", req.uri().path());
     let (parties, body) = req.into_parts();
     let corps_str = std::str::from_utf8(&hyper::body::to_bytes(body).await?)
         .unwrap()
@@ -106,7 +107,9 @@ async fn gestion_connexion(
 
     match parties.method {
         Method::GET => {
-            if chemin == *"../site/majs" {
+            if chemin == *"../site/" {
+                *reponse.body_mut() = Body::from(majs.vers_json());
+            } else if chemin == *"../site/majs" {
                 reponse
                     .headers_mut()
                     .insert(CONTENT_TYPE, "application/json".parse().unwrap());
@@ -202,13 +205,14 @@ async fn gestion_connexion(
                     .parse(json::parse(&corps_json_nettoye).unwrap())
                     .unwrap();
                 let date_aujourdhui = chrono::Local::now().date_naive();
-                // On ajoute la mise a jour au vecteur de mises a jour
-                let mut majs_lock = majs_arc.lock().unwrap();
-                (*majs_lock).push(mise_a_jour.clone());
-                drop(majs_lock);
+                {
+                    // On ajoute la mise a jour au vecteur de mises a jour
+                    let mut majs_lock = majs_arc.lock().unwrap();
+                    (*majs_lock).push(mise_a_jour.clone());
+                }
 
                 if mise_a_jour.date != date_aujourdhui {
-                    let mut planche_voulue = Planche::du(mise_a_jour.date);
+                    let mut planche_voulue = Planche::du(mise_a_jour.date).await;
                     planche_voulue.mettre_a_jour(mise_a_jour);
                     planche_voulue.enregistrer();
                 } else {

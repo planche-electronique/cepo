@@ -42,7 +42,7 @@ impl Planche {
                 planche_du_jour.enregistrer();
             }
             Err(_) => {
-                println!("Impossible d'obtenir la requete ogn lors de la lecture de la planche")
+                log::error!("Impossible d'obtenir la requete ogn lors de la lecture de la planche")
             }
         }
         Planche::planche_depuis_disque(date)
