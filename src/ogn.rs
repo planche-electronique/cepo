@@ -8,14 +8,14 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time;
 
-pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
+pub async fn thread_ogn(planche: Arc<Mutex<Planche>>) {
     loop {
         let date = chrono::Local::now().date_naive();
         let planche_lock = planche.lock().unwrap();
         let mut ancienne_planche = (*planche_lock).clone();
         drop(planche_lock);
         //on teste les égalités et on remplace si besoin
-        let requete = requete_ogn(date);
+        let requete = requete_ogn(date).await;
         match requete {
             Ok(requete_developpee) => {
                 let nouvelle_planche = traitement_requete_ogn(requete_developpee, date);
