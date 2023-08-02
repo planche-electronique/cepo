@@ -86,25 +86,24 @@ pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
     }
 }
 
-pub fn requete_ogn(date: NaiveDate) -> Result<String, reqwest::Error> {
+pub async fn requete_ogn(date: NaiveDate) -> Result<String, hyper::Error> {
     let airfield_code = "LFLE";
     log::info!(
         "Requete à http://flightbook.glidernet.org/api/logbook/{}/{}",
         airfield_code,
         date.format("%Y-%m-%d").to_string()
     );
-    let reponse = reqwest::blocking::get(format!(
+    let client = hyper::Client::new();
+    let chemin = format!(
         "http://flightbook.glidernet.org/api/logbook/{}/{}",
         airfield_code,
         date.format("%Y-%m-%d")
-    ));
-    match reponse {
-        Ok(reponse_developpee) => {
-            let corps = reponse_developpee.text().unwrap();
-            Ok(corps)
-        }
-        Err(erreur) => Err(erreur),
-    }
+    )
+    .parse::<hyper::Uri>()
+    .unwrap();
+    let reponse = client.get(chemin).await?;
+    let bytes = hyper::body::to_bytes(reponse.into_body()).await?;
+    return Ok(std::str::from_utf8(&bytes.to_vec()).unwrap().to_string());
 }
 
 pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
