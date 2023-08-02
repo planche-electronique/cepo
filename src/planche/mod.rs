@@ -27,7 +27,7 @@ impl Default for Planche {
 }
 
 impl Planche {
-    pub fn du(date: NaiveDate) -> Planche {
+    pub async fn du(date: NaiveDate) -> Planche {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
@@ -35,7 +35,7 @@ impl Planche {
         creer_chemin_jour(annee, mois, jour);
 
         //on récupère les données du vol même s'il n'y a pas d'informations
-        let requete = requete_ogn(date);
+        let requete = requete_ogn(date).await;
         match requete {
             Ok(requete_developpee) => {
                 let planche_du_jour = traitement_requete_ogn(requete_developpee, date);
