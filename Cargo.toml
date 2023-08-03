@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1.72"
 chrono = "0.4.24"
+confy = "0.5.1"
 env_logger = "0.10.0"
 human-panic = "1.1.5"
 hyper = { version = "0.14", features = ["full"] }
