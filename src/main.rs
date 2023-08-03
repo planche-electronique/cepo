@@ -3,7 +3,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use serveur::client::{Client, VariationRequete};
-use serveur::ogn::thread_ogn;
+use serveur::ogn::synchronisation_ogn;
 use serveur::planche::mise_a_jour::{MiseAJour, MiseAJourJson, MiseAJourObsoletes};
 use serveur::planche::{MettreAJour, Planche};
 use serveur::vol::{ChargementVols, Vol, VolJson};
@@ -41,21 +41,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     }
 
     let planche_arc: Arc<Mutex<Planche>> = Arc::new(Mutex::new(Planche::new()));
+    let planche = Planche::du(date_aujourdhui).await?;
     {
         let mut planche_lock = planche_arc.lock().unwrap();
-        *planche_lock = Planche::du(date_aujourdhui).await?;
+        *planche_lock = planche;
+        drop(planche_lock);
     }
 
     let majs_arc: Arc<Mutex<Vec<MiseAJour>>> = Arc::new(Mutex::new(Vec::new()));
 
     let planche_thread = planche_arc.clone();
-
-
-    // let service = make_service_fn(|_conn| async {
-    //     Ok::<_, hyper::Error>(service_fn(move |req: Request<Body>| async move {
-    //         gestion_connexion(req, requetes_en_cours, planche_arc, majs_arc);
-    //     }))
-    // });
 
     let service = make_service_fn(|_conn| {
         let requetes_en_cours = requetes_en_cours.clone();
@@ -77,7 +72,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //on spawn le thread qui va s'occuper de ogn
     tokio::spawn(async move {
         log::info!("Lancement du thread qui s'occupe des requetes OGN automatiquement.");
-        thread_ogn(planche_thread);
+        let planche_thread = planche_thread.clone();
+        loop {
+            synchronisation_ogn(planche_thread.clone()).await.unwrap();
+            tokio::time::sleep(tokio::time::Duration::from_secs(300)).await; //5 minutes
+        }
     });
 
     let serveur = Server::bind(&adresse).serve(service).with_graceful_shutdown(signal_extinction());

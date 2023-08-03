@@ -5,7 +5,7 @@ use chrono::prelude::*;
 use json::JsonValue;
 use log;
 use std::sync::{Arc, Mutex};
-use std::{thread, fs, time};
+use std::fs;
 
 pub async fn vols_ogn(date: NaiveDate) -> Result<Vec<Vol>, hyper::Error> {
     let airfield_code = "LFLE";
@@ -143,22 +143,20 @@ pub async fn vols_ogn(date: NaiveDate) -> Result<Vec<Vol>, hyper::Error> {
     Ok(vols)
 }
 
-pub async fn thread_ogn(
+pub async fn synchronisation_ogn(
     planche: Arc<Mutex<Planche>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    loop {
-        let date = chrono::Local::now().date_naive();
-        let planche_lock = planche.lock().unwrap();
-        let mut ancienne_planche = (*planche_lock).clone();
-        drop(planche_lock);
-        //on teste les égalités et on remplace si besoin
-        ancienne_planche.vols.mettre_a_jour(vols_ogn(date).await?);
+    let date = chrono::Local::now().date_naive();
+    let vols_ogn = vols_ogn(date).await?;
+    let planche_lock = planche.lock().unwrap();
+    let mut ancienne_planche = (*planche_lock).clone();
+    drop(planche_lock);
+    //on teste les égalités et on remplace si besoin
+    ancienne_planche.vols.mettre_a_jour(vols_ogn);
 
-        let mut planche_lock = planche.lock().unwrap();
-        *planche_lock = ancienne_planche.clone();
-        drop(planche_lock);
-        ancienne_planche.enregistrer();
-        // 5 minutes
-        thread::sleep(time::Duration::from_millis(300000));
-    }
+    let mut planche_lock = planche.lock().unwrap();
+    *planche_lock = ancienne_planche.clone();
+    drop(planche_lock);
+    ancienne_planche.enregistrer();
+    Ok(())
 }
