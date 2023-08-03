@@ -54,8 +54,20 @@ pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
 
 
 #[derive(Serialize, Deserialize)]
-struct MyConfig {
+struct Configuration {
     oaci: String,
-    f_synchronisation_mins: f32,
+    f_synchronisation_secs: f32,
     port: f32,
+    niveau_log: String,
+}
+
+impl Default for Configuration {
+    fn default() -> Self {
+        Self {
+            oaci: "LFLE".to_string(),
+            f_synchronisation_secs: 300,
+            port: 7878,
+            niveau_log: "info".to_string(),
+        }
+    }
 }

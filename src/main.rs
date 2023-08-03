@@ -24,7 +24,7 @@ use hyper::{Method, StatusCode};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //initialisation des outils cli (log, panic)
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     setup_panic!();
 
     log::info!("Démarrage...");
