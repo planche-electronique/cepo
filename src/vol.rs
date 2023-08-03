@@ -1,4 +1,7 @@
+use crate::creer_chemin_jour;
 use crate::nom_fichier_date;
+use crate::ogn::vols_ogn;
+use async_trait::async_trait;
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use json::JsonValue;
 use std::fs;
@@ -107,7 +110,6 @@ impl Vol {
 pub trait VolJson {
     fn vers_json(self) -> String;
     fn depuis_json(&mut self, json: JsonValue);
-    fn du(date: NaiveDate) -> Vec<Vol>;
 }
 
 impl VolJson for Vec<Vol> {
@@ -133,14 +135,77 @@ impl VolJson for Vec<Vol> {
         }
         (*self) = vols;
     }
+}
 
-    fn du(date: NaiveDate) -> Vec<Vol> {
+#[async_trait]
+pub trait ChargementVols {
+    fn enregistrer(&self, date: NaiveDate);
+    async fn du(date: NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
+}
+
+#[async_trait]
+impl ChargementVols for Vec<Vol> {
+    fn enregistrer(&self, date: NaiveDate) {
+        let vols = self.clone();
+        let annee = date.year();
+        let mois = date.month();
+        let jour = date.day();
+
+        let jour_str = nom_fichier_date(jour as i32);
+        let mois_str = nom_fichier_date(mois as i32);
+
+        log::info!(
+            "Enregistrement des vols du {}/{}/{}",
+            annee,
+            mois_str,
+            jour_str
+        );
+
+        creer_chemin_jour(annee, mois, jour);
+
+        for (index, vol) in vols.iter().enumerate() {
+            let index_str = nom_fichier_date(index as i32);
+            let chemin = format!(
+                "../site/dossier_de_travail/{}/{}/{}/{}.json",
+                annee, mois_str, jour_str, index_str
+            );
+            let mut fichier = String::new();
+            if std::path::Path::new(chemin.clone().as_str()).exists() {
+                fichier = fs::read_to_string(chemin.clone()).unwrap_or_else(|err| {
+                    log::error!(
+                        "fichier numero {} de chemin {} introuvable ou non ouvrable : {}",
+                        index,
+                        chemin.clone(),
+                        err.to_string()
+                    );
+                    "".to_string()
+                });
+            }
+
+            if fichier != vol.vers_json() {
+                fs::write(chemin, vol.vers_json()).unwrap_or_else(|err| {
+                    log::error!(
+                        "Impossible d'écrire le fichier du jour {}/{}/{} et d'index {} : {}",
+                        annee,
+                        mois_str,
+                        jour_str,
+                        index,
+                        err
+                    );
+                });
+            }
+        }
+    }
+
+    async fn du(date: NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
 
         let mois_str = nom_fichier_date(mois as i32);
         let jour_str = nom_fichier_date(jour as i32);
+
+        log::info!("Lecture des fichiers de vol du {annee}/{mois_str}/{jour_str}");
 
         let fichiers = fs::read_dir(format!(
             "../site/dossier_de_travail/{}/{}/{}/",
@@ -171,7 +236,64 @@ impl VolJson for Vec<Vol> {
                 vols.push(vol);
             }
         }
-        vols
+        vols.mettre_a_jour(vols_ogn(date).await?);
+        vols.enregistrer(date);
+        Ok(vols)
+    }
+}
+
+pub trait MettreAJour {
+    fn mettre_a_jour(&mut self, nouveaux_vols: Vec<Vol>);
+}
+
+impl MettreAJour for Vec<Vol> {
+    fn mettre_a_jour(&mut self, derniers_vols: Vec<Vol>) {
+        //on teste les égalités et on remplace si besoin
+        let mut rang_prochain_vol = 0;
+        let mut priorite_prochain_vol = 0;
+        #[allow(unused_assignments)]
+        for (mut rang_nouveau_vol, nouveau_vol) in derniers_vols.into_iter().enumerate() {
+            let mut existe = false;
+            for ancien_vol in &mut *self {
+                // si on est sur le meme vol
+                if nouveau_vol.numero_ogn == ancien_vol.numero_ogn {
+                    existe = true;
+                    let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+                    //teste les différentes valeurs qui peuvent être mises a jour
+                    if ancien_vol.decollage == heure_default {
+                        ancien_vol.decollage = nouveau_vol.decollage;
+                    }
+                    if ancien_vol.atterissage == heure_default {
+                        ancien_vol.atterissage = nouveau_vol.atterissage;
+                    }
+                } else if nouveau_vol.aeronef == ancien_vol.aeronef {
+                    if priorite_prochain_vol != 0 {
+                        if priorite_prochain_vol < nouveau_vol.numero_ogn
+                            && nouveau_vol.numero_ogn < 0
+                        {
+                            existe = true;
+                            priorite_prochain_vol = nouveau_vol.numero_ogn;
+                            rang_prochain_vol = rang_nouveau_vol;
+                        }
+                    } else if nouveau_vol.numero_ogn < 0 && priorite_prochain_vol == 0 {
+                        existe = true;
+                        priorite_prochain_vol = nouveau_vol.numero_ogn;
+                        rang_prochain_vol = rang_nouveau_vol;
+                    }
+                }
+            }
+            if priorite_prochain_vol != 0 {
+                // on recupere le vol affecté avec le plus de priorité et on lui affecte les données de ogn
+                self[rang_prochain_vol].numero_ogn = nouveau_vol.numero_ogn;
+                self[rang_prochain_vol].code_decollage = nouveau_vol.code_decollage.clone();
+                self[rang_prochain_vol].decollage = nouveau_vol.decollage;
+                self[rang_prochain_vol].atterissage = nouveau_vol.atterissage;
+            }
+            if !existe {
+                self.push(nouveau_vol);
+            }
+            rang_nouveau_vol += 1;
+        }
     }
 }
 

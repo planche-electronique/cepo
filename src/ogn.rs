@@ -1,5 +1,5 @@
 use crate::planche::Planche;
-use crate::vol::Vol;
+use crate::vol::{MettreAJour, Vol};
 use crate::Appareil;
 use chrono::prelude::*;
 use json::JsonValue;
@@ -8,107 +8,26 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time;
 
-pub fn thread_ogn(planche: Arc<Mutex<Planche>>) {
-    loop {
-        let date = chrono::Local::now().date_naive();
-        let planche_lock = planche.lock().unwrap();
-        let mut ancienne_planche = (*planche_lock).clone();
-        drop(planche_lock);
-        //on teste les égalités et on remplace si besoin
-        let requete = requete_ogn(date);
-        match requete {
-            Ok(requete_developpee) => {
-                let nouvelle_planche = traitement_requete_ogn(requete_developpee, date);
-
-                let mut rang_prochain_vol = 0;
-                let mut priorite_prochain_vol = 0;
-                #[allow(unused_assignments)]
-                for (mut rang_nouveau_vol, nouveau_vol) in
-                    nouvelle_planche.vols.clone().into_iter().enumerate()
-                {
-                    let mut existe = false;
-                    for ancien_vol in &mut ancienne_planche.vols {
-                        // si on est sur le meme vol
-                        if nouveau_vol.numero_ogn == ancien_vol.numero_ogn {
-                            existe = true;
-                            let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
-                            //teste les différentes valeurs qui peuvent être mises a jour
-                            if ancien_vol.decollage == heure_default {
-                                ancien_vol.decollage = nouveau_vol.decollage;
-                            }
-                            if ancien_vol.atterissage == heure_default {
-                                ancien_vol.atterissage = nouveau_vol.atterissage;
-                            }
-                        } else if nouveau_vol.aeronef == ancien_vol.aeronef {
-                            if priorite_prochain_vol != 0 {
-                                if priorite_prochain_vol < nouveau_vol.numero_ogn
-                                    && nouveau_vol.numero_ogn < 0
-                                {
-                                    existe = true;
-                                    priorite_prochain_vol = nouveau_vol.numero_ogn;
-                                    rang_prochain_vol = rang_nouveau_vol;
-                                }
-                            } else if nouveau_vol.numero_ogn < 0 && priorite_prochain_vol == 0 {
-                                existe = true;
-                                priorite_prochain_vol = nouveau_vol.numero_ogn;
-                                rang_prochain_vol = rang_nouveau_vol;
-                            }
-                        }
-                    }
-                    if priorite_prochain_vol != 0 {
-                        // on recupere le vol affecté avec le plus de priorité et on lui affecte les données de ogn
-                        ancienne_planche.vols[rang_prochain_vol].numero_ogn =
-                            nouveau_vol.numero_ogn;
-                        ancienne_planche.vols[rang_prochain_vol].code_decollage =
-                            nouveau_vol.code_decollage.clone();
-                        ancienne_planche.vols[rang_prochain_vol].decollage = nouveau_vol.decollage;
-                        ancienne_planche.vols[rang_prochain_vol].atterissage =
-                            nouveau_vol.atterissage;
-                    }
-                    if !existe {
-                        ancienne_planche.vols.push(nouveau_vol);
-                    }
-                    rang_nouveau_vol += 1;
-                }
-
-                let mut planche_lock = planche.lock().unwrap();
-                *planche_lock = ancienne_planche.clone();
-                drop(planche_lock);
-                ancienne_planche.enregistrer();
-                // 5 minutes
-                thread::sleep(time::Duration::from_millis(300000));
-            }
-            Err(_) => {
-                log::warn!("Impossible de se connecter àl'A.P.I. de O.G.N. Veuillez vérifier votre connection internet.");
-                thread::sleep(time::Duration::from_millis(30000));
-            }
-        }
-    }
-}
-
-pub fn requete_ogn(date: NaiveDate) -> Result<String, reqwest::Error> {
+pub async fn vols_ogn(date: NaiveDate) -> Result<Vec<Vol>, hyper::Error> {
     let airfield_code = "LFLE";
     log::info!(
         "Requete à http://flightbook.glidernet.org/api/logbook/{}/{}",
         airfield_code,
         date.format("%Y-%m-%d").to_string()
     );
-    let reponse = reqwest::blocking::get(format!(
+    let client = hyper::Client::new();
+    let chemin = format!(
         "http://flightbook.glidernet.org/api/logbook/{}/{}",
         airfield_code,
         date.format("%Y-%m-%d")
-    ));
-    match reponse {
-        Ok(reponse_developpee) => {
-            let corps = reponse_developpee.text().unwrap();
-            Ok(corps)
-        }
-        Err(erreur) => Err(erreur),
-    }
-}
+    )
+    .parse::<hyper::Uri>()
+    .unwrap();
+    let reponse = client.get(chemin).await?;
+    let bytes = hyper::body::to_bytes(reponse.into_body()).await?;
+    let corps_str = std::str::from_utf8(&bytes).unwrap().to_string();
 
-pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
-    let requete_parse = json::parse(requete.as_str()).unwrap();
+    let requete_parse = json::parse(corps_str.as_str()).unwrap();
     log::info!("Traitement de la requete.");
 
     /* ogn repere les aéronefs d'un jour en les listants et leur attribuant un id,
@@ -172,7 +91,7 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
             //si l'immat n'est pas dans la liste, on ne la prend pas en compte
             continue;
         }
-        //decoollage
+        //decollage
         let mut start_json = vol_json["start"].clone();
         let start_str = start_json
             .take_string()
@@ -214,13 +133,25 @@ pub fn traitement_requete_ogn(requete: String, date: NaiveDate) -> Planche {
             atterissage,
         });
     }
-    Planche {
-        date,
-        vols,
-        pilote_tr: String::new(),
-        treuil: String::new(),
-        pilote_rq: String::new(),
-        remorqueur: String::new(),
-        chef_piste: String::new(),
+    Ok(vols)
+}
+
+pub async fn thread_ogn(
+    planche: Arc<Mutex<Planche>>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    loop {
+        let date = chrono::Local::now().date_naive();
+        let planche_lock = planche.lock().unwrap();
+        let mut ancienne_planche = (*planche_lock).clone();
+        drop(planche_lock);
+        //on teste les égalités et on remplace si besoin
+        ancienne_planche.vols.mettre_a_jour(vols_ogn(date).await?);
+
+        let mut planche_lock = planche.lock().unwrap();
+        *planche_lock = ancienne_planche.clone();
+        drop(planche_lock);
+        ancienne_planche.enregistrer();
+        // 5 minutes
+        thread::sleep(time::Duration::from_millis(300000));
     }
 }
