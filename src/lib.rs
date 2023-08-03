@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::Path;
+use serde_derive::{Serialize, Deserialize};
 
 pub mod client;
 pub mod ogn;
@@ -49,4 +50,12 @@ pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
         .unwrap();
         log::info!("Création du chemin {}/{}/{}", annee, mois_str, jour_str);
     }
+}
+
+
+#[derive(Serialize, Deserialize)]
+struct MyConfig {
+    oaci: String,
+    f_synchronisation_mins: f32,
+    port: f32,
 }
