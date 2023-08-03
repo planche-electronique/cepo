@@ -33,7 +33,7 @@ impl Planche {
         let jour = date.day();
 
         creer_chemin_jour(annee, mois, jour);
-        let mut planche = Planche::planche_depuis_disque(date).await?;
+        let mut planche = Planche::depuis_disque(date).unwrap();
         planche.mettre_a_jour_ogn().await?;
         planche.enregistrer();
         Ok(planche)
@@ -95,7 +95,7 @@ impl Planche {
         Ok(())
     }
 
-    pub async fn planche_depuis_disque(
+    pub fn depuis_disque(
         date: NaiveDate,
     ) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
         let annee = date.year();
@@ -111,7 +111,7 @@ impl Planche {
         let mois_str = nom_fichier_date(mois as i32);
         let jour_str = nom_fichier_date(jour as i32);
 
-        let vols: Vec<Vol> = Vec::du(date).await?;
+        let vols: Vec<Vol> = Vec::depuis_disque(date).unwrap();
         let affectations_str = fs::read_to_string(format!(
             "../site/dossier_de_travail/{}/{}/{}/affectations.json",
             annee, mois_str, jour_str

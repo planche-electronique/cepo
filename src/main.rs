@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     }
 
     let planche_arc: Arc<Mutex<Planche>> = Arc::new(Mutex::new(Planche::new()));
-    let planche = Planche::du(date_aujourdhui).await?;
+    let planche = Planche::depuis_disque(date_aujourdhui).unwrap();
     {
         let mut planche_lock = planche_arc.lock().unwrap();
         *planche_lock = planche;

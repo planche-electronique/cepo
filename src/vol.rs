@@ -139,7 +139,8 @@ impl VolJson for Vec<Vol> {
 #[async_trait]
 pub trait ChargementVols {
     fn enregistrer(&self, date: NaiveDate);
-    async fn du(date: NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
+    fn depuis_disque(date: NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn du(date:NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 #[async_trait]
@@ -196,7 +197,7 @@ impl ChargementVols for Vec<Vol> {
         }
     }
 
-    async fn du(date: NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
+    fn depuis_disque(date: NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
@@ -237,11 +238,17 @@ impl ChargementVols for Vec<Vol> {
                 vols.push(vol);
             }
         }
+        Ok(vols)
+    }
+        
+    async fn du(date:NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut vols = Vec::depuis_disque(date).unwrap();
         vols.mettre_a_jour(vols_ogn(date).await?);
         vols.enregistrer(date);
         Ok(vols)
     }
 }
+
 
 pub trait MettreAJour {
     fn mettre_a_jour(&mut self, nouveaux_vols: Vec<Vol>);
