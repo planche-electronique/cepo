@@ -46,7 +46,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let planche_thread = planche_arc.clone();
 
-    log::info!("Serveur démarré.");
 
     // let service = make_service_fn(|_conn| async {
     //     Ok::<_, hyper::Error>(service_fn(move |req: Request<Body>| async move {
@@ -77,7 +76,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         drop(thread_ogn(planche_thread));
     });
 
-    let serveur = Server::bind(&adresse).serve(service);
+    let serveur = Server::bind(&adresse).serve(service).with_graceful_shutdown(signal_extinction());
+    log::info!("Serveur démarré.");
     serveur.await?;
     Ok(())
 }
@@ -257,6 +257,13 @@ async fn gestion_connexion(
 
     requetes_en_cours.clone().decrementer(adresse);
     Ok(reponse)
+}
+
+async fn signal_extinction() {
+    // Attendre pour le signal CTRL+C
+    tokio::signal::ctrl_c()
+        .await
+        .expect("Echec a l'installation du gestionnaire de signal Ctrl-C");
 }
 
 mod tests;
