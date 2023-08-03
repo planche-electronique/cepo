@@ -108,7 +108,7 @@ async fn gestion_connexion(
     match parties.method {
         Method::GET => {
             if chemin == *"../site/" {
-                *reponse.body_mut() = Body::from(majs.vers_json());
+                *reponse.body_mut() = Body::from(fs::read_to_string("../site/index.html").unwrap());
             } else if chemin == *"../site/majs" {
                 reponse
                     .headers_mut()
