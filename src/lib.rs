@@ -12,24 +12,6 @@ pub struct Appareil {
     pub immatriculation: String,
 }
 
-pub fn parametres_liste_depuis_json(fichier: &str) -> Vec<String> {
-    log::info!("Lecture de la liste de paramètres {}", fichier);
-    let contenu_fichier =
-        fs::read_to_string(format!("../site/{}", fichier)).unwrap_or_else(|err| {
-            panic!(
-                "Probleme lors de la leture du fichier {} : {}",
-                fichier, err
-            );
-        });
-    let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
-    let iter_fichier = fichier_parse.members();
-    let mut elements = Vec::new();
-    for valeur_json in iter_fichier {
-        elements.push(valeur_json.as_str().unwrap().to_string());
-    }
-    elements
-}
-
 pub fn nom_fichier_date(nombre: i32) -> String {
     if nombre > 9 {
         nombre.to_string()

@@ -5,8 +5,7 @@ use chrono::prelude::*;
 use json::JsonValue;
 use log;
 use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time;
+use std::{thread, fs, time};
 
 pub async fn vols_ogn(date: NaiveDate) -> Result<Vec<Vol>, hyper::Error> {
     let airfield_code = "LFLE";
@@ -76,7 +75,15 @@ pub async fn vols_ogn(date: NaiveDate) -> Result<Vec<Vol>, hyper::Error> {
             Vec::new()
         }
     };
-    let immatriculations = crate::parametres_liste_depuis_json("immatriculations.json");
+
+    let contenu_fichier = fs::read_to_string("../site/infos.json").unwrap();
+    let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
+    let immatriculations_json = &fichier_parse["immatriculations"];
+    let iter_fichier = immatriculations_json.members();
+    let mut immatriculations = Vec::new();
+    for valeur_json in iter_fichier {
+        immatriculations.push(valeur_json.as_str().unwrap().to_string());
+    }
     for (mut index, vol_json) in vols_json.clone().into_iter().enumerate() {
         index += 1;
 
