@@ -1,6 +1,6 @@
 pub mod mise_a_jour;
 
-use crate::ogn::{requete_ogn, traitement_requete_ogn};
+use crate::ogn::vols_ogn;
 use crate::vol::{Vol, VolJson};
 use crate::{creer_chemin_jour, nom_fichier_date};
 use chrono::{Datelike, NaiveDate, NaiveTime};
@@ -27,25 +27,72 @@ impl Default for Planche {
 }
 
 impl Planche {
-    pub async fn du(date: NaiveDate) -> Planche {
+    pub async fn du(date: NaiveDate) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
 
         creer_chemin_jour(annee, mois, jour);
+        let mut planche = Planche::planche_depuis_disque(date);
+        planche.mettre_a_jour_ogn().await?;
+        planche.enregistrer();
+        Ok(planche)
+    }
 
-        //on récupère les données du vol même s'il n'y a pas d'informations
-        let requete = requete_ogn(date).await;
-        match requete {
-            Ok(requete_developpee) => {
-                let planche_du_jour = traitement_requete_ogn(requete_developpee, date);
-                planche_du_jour.enregistrer();
+    pub async fn mettre_a_jour_ogn(
+        &mut self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let date = chrono::Local::now().date_naive();
+        //on teste les égalités et on remplace si besoin
+        let derniers_vols = vols_ogn(date).await?;
+        let mut rang_prochain_vol = 0;
+        let mut priorite_prochain_vol = 0;
+        let ancienne_planche = self;
+        #[allow(unused_assignments)]
+        for (mut rang_nouveau_vol, nouveau_vol) in derniers_vols.into_iter().enumerate() {
+            let mut existe = false;
+            for ancien_vol in &mut ancienne_planche.vols {
+                // si on est sur le meme vol
+                if nouveau_vol.numero_ogn == ancien_vol.numero_ogn {
+                    existe = true;
+                    let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+                    //teste les différentes valeurs qui peuvent être mises a jour
+                    if ancien_vol.decollage == heure_default {
+                        ancien_vol.decollage = nouveau_vol.decollage;
+                    }
+                    if ancien_vol.atterissage == heure_default {
+                        ancien_vol.atterissage = nouveau_vol.atterissage;
+                    }
+                } else if nouveau_vol.aeronef == ancien_vol.aeronef {
+                    if priorite_prochain_vol != 0 {
+                        if priorite_prochain_vol < nouveau_vol.numero_ogn
+                            && nouveau_vol.numero_ogn < 0
+                        {
+                            existe = true;
+                            priorite_prochain_vol = nouveau_vol.numero_ogn;
+                            rang_prochain_vol = rang_nouveau_vol;
+                        }
+                    } else if nouveau_vol.numero_ogn < 0 && priorite_prochain_vol == 0 {
+                        existe = true;
+                        priorite_prochain_vol = nouveau_vol.numero_ogn;
+                        rang_prochain_vol = rang_nouveau_vol;
+                    }
+                }
             }
-            Err(_) => {
-                log::error!("Impossible d'obtenir la requete ogn lors de la lecture de la planche")
+            if priorite_prochain_vol != 0 {
+                // on recupere le vol affecté avec le plus de priorité et on lui affecte les données de ogn
+                ancienne_planche.vols[rang_prochain_vol].numero_ogn = nouveau_vol.numero_ogn;
+                ancienne_planche.vols[rang_prochain_vol].code_decollage =
+                    nouveau_vol.code_decollage.clone();
+                ancienne_planche.vols[rang_prochain_vol].decollage = nouveau_vol.decollage;
+                ancienne_planche.vols[rang_prochain_vol].atterissage = nouveau_vol.atterissage;
             }
+            if !existe {
+                ancienne_planche.vols.push(nouveau_vol);
+            }
+            rang_nouveau_vol += 1;
         }
-        Planche::planche_depuis_disque(date)
+        Ok(())
     }
 
     pub fn planche_depuis_disque(date: NaiveDate) -> Planche {

@@ -10,7 +10,6 @@ use serveur::planche::{MettreAJour, Planche};
 use serveur::vol::{Vol, VolJson};
 
 use chrono::NaiveDate;
-use simple_http_parser::request;
 
 //hyper utils
 use std::convert::Infallible;
@@ -18,8 +17,8 @@ use std::net::SocketAddr;
 
 use hyper::header::*;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{header, Method, StatusCode};
 use hyper::{Body, Request, Response, Server};
+use hyper::{Method, StatusCode};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -41,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let planche_arc: Arc<Mutex<Planche>> = Arc::new(Mutex::new(Planche::new()));
     {
         let mut planche_lock = planche_arc.lock().unwrap();
-        *planche_lock = Planche::du(date_aujourdhui).await;
+        *planche_lock = Planche::du(date_aujourdhui).await?;
     }
 
     let majs_arc: Arc<Mutex<Vec<MiseAJour>>> = Arc::new(Mutex::new(Vec::new()));
@@ -55,15 +54,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //         gestion_connexion(req, requetes_en_cours, planche_arc, majs_arc);
     //     }))
     // });
-    
+
     let service = make_service_fn(|_conn| {
         let requetes_en_cours = requetes_en_cours.clone();
         let planche_arc = planche_arc.clone();
         let majs_arc = majs_arc.clone();
-        
-        async move { 
+
+        async move {
             Ok::<_, Infallible>(service_fn(move |req| {
-                gestion_connexion(req, requetes_en_cours.clone(), planche_arc.clone(), majs_arc.clone())
+                gestion_connexion(
+                    req,
+                    requetes_en_cours.clone(),
+                    planche_arc.clone(),
+                    majs_arc.clone(),
+                )
             }))
         }
     });
@@ -212,7 +216,7 @@ async fn gestion_connexion(
                 }
 
                 if mise_a_jour.date != date_aujourdhui {
-                    let mut planche_voulue = Planche::du(mise_a_jour.date).await;
+                    let mut planche_voulue = Planche::du(mise_a_jour.date).await?;
                     planche_voulue.mettre_a_jour(mise_a_jour);
                     planche_voulue.enregistrer();
                 } else {
