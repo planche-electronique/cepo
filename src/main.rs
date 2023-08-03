@@ -7,6 +7,7 @@ use serveur::ogn::synchronisation_ogn;
 use serveur::planche::mise_a_jour::{MiseAJour, MiseAJourJson, MiseAJourObsoletes};
 use serveur::planche::{MettreAJour, Planche};
 use serveur::vol::{ChargementVols, Vol, VolJson};
+use serveur::Configuration;
 
 use chrono::NaiveDate;
 
@@ -26,8 +27,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //initialisation des outils cli (log, panic)
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     setup_panic!();
-
     log::info!("Démarrage...");
+    let configuration = confy::load("serveur", None).unwrap_or_else(|err| {
+        log::warn!("Fichier de configuration non trouvé, utilisation de défaut : {}", err);
+        Configuration::default()
+    });
+    confy::store("serveur", None, configuration)?;
+    
     let date_aujourdhui = chrono::Local::now().date_naive();
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     //let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
