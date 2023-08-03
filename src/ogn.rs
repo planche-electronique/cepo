@@ -1,5 +1,5 @@
 use crate::planche::Planche;
-use crate::vol::{Vol, MettreAJour};
+use crate::vol::{MettreAJour, Vol};
 use crate::Appareil;
 use chrono::prelude::*;
 use json::JsonValue;
@@ -25,7 +25,7 @@ pub async fn vols_ogn(date: NaiveDate) -> Result<Vec<Vol>, hyper::Error> {
     .unwrap();
     let reponse = client.get(chemin).await?;
     let bytes = hyper::body::to_bytes(reponse.into_body()).await?;
-    let corps_str = std::str::from_utf8(&bytes.to_vec()).unwrap().to_string();
+    let corps_str = std::str::from_utf8(&bytes).unwrap().to_string();
 
     let requete_parse = json::parse(corps_str.as_str()).unwrap();
     log::info!("Traitement de la requete.");
@@ -146,7 +146,6 @@ pub async fn thread_ogn(
         drop(planche_lock);
         //on teste les égalités et on remplace si besoin
         ancienne_planche.vols.mettre_a_jour(vols_ogn(date).await?);
-        
 
         let mut planche_lock = planche.lock().unwrap();
         *planche_lock = ancienne_planche.clone();

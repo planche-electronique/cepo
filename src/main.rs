@@ -1,7 +1,6 @@
 use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use std::thread;
 
 use serveur::client::{Client, VariationRequete};
 use serveur::ogn::thread_ogn;
@@ -75,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //on spawn le thread qui va s'occuper de ogn
     tokio::spawn(async move {
         log::info!("Lancement du thread qui s'occupe des requetes OGN automatiquement.");
-        let _ = thread_ogn(planche_thread);
+        drop(thread_ogn(planche_thread));
     });
 
     let serveur = Server::bind(&adresse).serve(service);
@@ -260,7 +259,4 @@ async fn gestion_connexion(
     Ok(reponse)
 }
 
-async fn hello(_: Request<Body>) -> Result<Response<Body>, Infallible> {
-    Ok(Response::new(Body::from("Hello World!")))
-}
 mod tests;
