@@ -163,9 +163,8 @@ impl ChargementVols for Vec<Vol> {
 
         creer_chemin_jour(annee, mois, jour);
 
-        let mut index = 1;
-        for vol in vols {
-            let index_str = nom_fichier_date(index);
+        for (index, vol) in vols.iter().enumerate() {
+            let index_str = nom_fichier_date(index as i32);
             let chemin = format!(
                 "../site/dossier_de_travail/{}/{}/{}/{}.json",
                 annee, mois_str, jour_str, index_str
