@@ -1,5 +1,4 @@
-use crate::creer_chemin_jour;
-use crate::nom_fichier_date;
+use crate::{creer_chemin_jour, nom_fichier_date};
 use crate::ogn::vols_ogn;
 use async_trait::async_trait;
 use chrono::{Datelike, NaiveDate, NaiveTime};
@@ -207,11 +206,13 @@ impl ChargementVols for Vec<Vol> {
 
         log::info!("Lecture des fichiers de vol du {annee}/{mois_str}/{jour_str}");
 
+        creer_chemin_jour(annee, mois, jour);
+
         let fichiers = fs::read_dir(format!(
             "../site/dossier_de_travail/{}/{}/{}/",
             annee, mois_str, jour_str
         ))
-        .unwrap();
+        .unwrap();   
         let mut vols: Vec<Vol> = Vec::new();
 
         for fichier in fichiers {
