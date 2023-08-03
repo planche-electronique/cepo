@@ -988,7 +988,6 @@ dependencies = [
  "json",
  "log",
  "reqwest",
- "simple_http_parser",
  "tokio",
 ]
 
@@ -1000,12 +999,6 @@ checksum = "d8229b473baa5980ac72ef434c4415e70c4b5e71b423043adb4ba059f89c99a1"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "simple_http_parser"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "470db8f66662d39967792b8c4e1ebc4077a568ec706df03934c144499279e174"
 
 [[package]]
 name = "slab"
