@@ -1,5 +1,5 @@
 use crate::planche::Planche;
-use crate::vol::Vol;
+use crate::vol::{Vol, MettreAJour};
 use crate::Appareil;
 use chrono::prelude::*;
 use json::JsonValue;
@@ -145,53 +145,8 @@ pub async fn thread_ogn(
         let mut ancienne_planche = (*planche_lock).clone();
         drop(planche_lock);
         //on teste les égalités et on remplace si besoin
-        let derniers_vols = vols_ogn(date).await?;
-        let mut rang_prochain_vol = 0;
-        let mut priorite_prochain_vol = 0;
-        #[allow(unused_assignments)]
-        for (mut rang_nouveau_vol, nouveau_vol) in derniers_vols.into_iter().enumerate() {
-            let mut existe = false;
-            for ancien_vol in &mut ancienne_planche.vols {
-                // si on est sur le meme vol
-                if nouveau_vol.numero_ogn == ancien_vol.numero_ogn {
-                    existe = true;
-                    let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
-                    //teste les différentes valeurs qui peuvent être mises a jour
-                    if ancien_vol.decollage == heure_default {
-                        ancien_vol.decollage = nouveau_vol.decollage;
-                    }
-                    if ancien_vol.atterissage == heure_default {
-                        ancien_vol.atterissage = nouveau_vol.atterissage;
-                    }
-                } else if nouveau_vol.aeronef == ancien_vol.aeronef {
-                    if priorite_prochain_vol != 0 {
-                        if priorite_prochain_vol < nouveau_vol.numero_ogn
-                            && nouveau_vol.numero_ogn < 0
-                        {
-                            existe = true;
-                            priorite_prochain_vol = nouveau_vol.numero_ogn;
-                            rang_prochain_vol = rang_nouveau_vol;
-                        }
-                    } else if nouveau_vol.numero_ogn < 0 && priorite_prochain_vol == 0 {
-                        existe = true;
-                        priorite_prochain_vol = nouveau_vol.numero_ogn;
-                        rang_prochain_vol = rang_nouveau_vol;
-                    }
-                }
-            }
-            if priorite_prochain_vol != 0 {
-                // on recupere le vol affecté avec le plus de priorité et on lui affecte les données de ogn
-                ancienne_planche.vols[rang_prochain_vol].numero_ogn = nouveau_vol.numero_ogn;
-                ancienne_planche.vols[rang_prochain_vol].code_decollage =
-                    nouveau_vol.code_decollage.clone();
-                ancienne_planche.vols[rang_prochain_vol].decollage = nouveau_vol.decollage;
-                ancienne_planche.vols[rang_prochain_vol].atterissage = nouveau_vol.atterissage;
-            }
-            if !existe {
-                ancienne_planche.vols.push(nouveau_vol);
-            }
-            rang_nouveau_vol += 1;
-        }
+        ancienne_planche.vols.mettre_a_jour(vols_ogn(date).await?);
+        
 
         let mut planche_lock = planche.lock().unwrap();
         *planche_lock = ancienne_planche.clone();

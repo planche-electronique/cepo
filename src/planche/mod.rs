@@ -1,7 +1,7 @@
 pub mod mise_a_jour;
 
 use crate::ogn::vols_ogn;
-use crate::vol::{Vol, VolJson};
+use crate::vol::{ChargementVols, Vol, VolJson};
 use crate::{creer_chemin_jour, nom_fichier_date};
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use json;
@@ -33,7 +33,7 @@ impl Planche {
         let jour = date.day();
 
         creer_chemin_jour(annee, mois, jour);
-        let mut planche = Planche::planche_depuis_disque(date);
+        let mut planche = Planche::planche_depuis_disque(date).await?;
         planche.mettre_a_jour_ogn().await?;
         planche.enregistrer();
         Ok(planche)
@@ -95,7 +95,9 @@ impl Planche {
         Ok(())
     }
 
-    pub fn planche_depuis_disque(date: NaiveDate) -> Planche {
+    pub async fn planche_depuis_disque(
+        date: NaiveDate,
+    ) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
@@ -109,7 +111,7 @@ impl Planche {
         let mois_str = nom_fichier_date(mois as i32);
         let jour_str = nom_fichier_date(jour as i32);
 
-        let vols: Vec<Vol> = Vec::du(date);
+        let vols: Vec<Vol> = Vec::du(date).await?;
         let affectations_str = fs::read_to_string(format!(
             "../site/dossier_de_travail/{}/{}/{}/affectations.json",
             annee, mois_str, jour_str
@@ -128,7 +130,7 @@ impl Planche {
             .unwrap()
             .to_string();
 
-        Planche {
+        Ok(Planche {
             date,
             vols,
             pilote_tr,
@@ -136,67 +138,25 @@ impl Planche {
             pilote_rq,
             remorqueur,
             chef_piste,
-        }
+        })
     }
 
     pub fn enregistrer(&self) {
         let date = self.date;
-        let vols = self.vols.clone();
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
 
-        log::info!(
-            "Enregistrement de la planche du {}/{}/{}",
-            annee,
-            mois,
-            jour
-        );
-
         let jour_str = nom_fichier_date(jour as i32);
         let mois_str = nom_fichier_date(mois as i32);
 
-        creer_chemin_jour(annee, mois, jour);
-
-        let mut index = 1;
-        for vol in vols {
-            let index_str = nom_fichier_date(index);
-            let chemin = format!(
-                "../site/dossier_de_travail/{}/{}/{}/{}.json",
-                annee, mois_str, jour_str, index_str
-            );
-            let mut fichier = String::new();
-            if std::path::Path::new(chemin.clone().as_str()).exists() {
-                fichier = fs::read_to_string(chemin.clone()).unwrap_or_else(|err| {
-                    log::error!(
-                        "fichier numero {} de chemin {} introuvable ou non ouvrable : {}",
-                        index,
-                        chemin.clone(),
-                        err.to_string()
-                    );
-                    "".to_string()
-                });
-            }
-
-            if fichier != vol.vers_json() {
-                fs::write(chemin, vol.vers_json()).unwrap_or_else(|err| {
-                    log::error!(
-                        "Impossible d'écrire le fichier du jour {}/{}/{} et d'index {} : {}",
-                        annee,
-                        mois_str,
-                        jour_str,
-                        index,
-                        err
-                    );
-                });
-            }
-            index += 1;
-        }
+        self.vols.enregistrer(date);
 
         let chemin = format!(
             "../site/dossier_de_travail/{}/{}/{}/affectations.json",
             annee, mois_str, jour_str
         );
+        log::info!("Enregistrement des affectations du {annee}/{mois_str}/{jour_str}");
         let affectations_fichier = fs::read_to_string(chemin.clone()).unwrap_or_default();
         let affectations = json::object! {
             "pilote_tr": self.pilote_tr.clone(),

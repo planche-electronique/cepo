@@ -7,7 +7,7 @@ use serveur::client::{Client, VariationRequete};
 use serveur::ogn::thread_ogn;
 use serveur::planche::mise_a_jour::{MiseAJour, MiseAJourJson, MiseAJourObsoletes};
 use serveur::planche::{MettreAJour, Planche};
-use serveur::vol::{Vol, VolJson};
+use serveur::vol::{ChargementVols, Vol, VolJson};
 
 use chrono::NaiveDate;
 
@@ -73,12 +73,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     });
 
     //on spawn le thread qui va s'occuper de ogn
-    let _ = thread::Builder::new()
-        .name("Thread OGN".to_string())
-        .spawn(move || {
-            log::info!("Lancement du thread qui s'occupe des requetes OGN automatiquement.");
-            thread_ogn(planche_thread);
-        });
+    tokio::spawn(async move {
+        log::info!("Lancement du thread qui s'occupe des requetes OGN automatiquement.");
+        let _ = thread_ogn(planche_thread);
+    });
 
     let serveur = Server::bind(&adresse).serve(service);
     serveur.await?;
@@ -101,11 +99,7 @@ async fn gestion_connexion(
         .unwrap()
         .to_string();
 
-    log::info!(
-        "{} : requete du fichier {}",
-        adresse.clone(),
-        chemin.clone()
-    );
+    log::info!("Requete du fichier {}", chemin.clone());
 
     let mut reponse = Response::new(Body::empty());
 
@@ -143,7 +137,7 @@ async fn gestion_connexion(
                 let date_str = &chemin[12..23];
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
 
-                let vols: Vec<Vol> = Vec::du(date);
+                let vols: Vec<Vol> = Vec::du(date).await?;
                 *reponse.body_mut() = Body::from(vols.vers_json());
 
             //fichier de vols "émulé"
