@@ -10,6 +10,8 @@ use serveur::vol::{ChargementVols, Vol, VolJson};
 
 use chrono::NaiveDate;
 
+use human_panic::setup_panic;
+
 //hyper utils
 use std::convert::Infallible;
 use std::net::SocketAddr;
@@ -21,7 +23,9 @@ use hyper::{Method, StatusCode};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    //initialisation des outils cli (log, panic)
     env_logger::init();
+    setup_panic!();
 
     log::info!("Démarrage...");
     let date_aujourdhui = chrono::Local::now().date_naive();
@@ -73,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //on spawn le thread qui va s'occuper de ogn
     tokio::spawn(async move {
         log::info!("Lancement du thread qui s'occupe des requetes OGN automatiquement.");
-        drop(thread_ogn(planche_thread));
+        thread_ogn(planche_thread);
     });
 
     let serveur = Server::bind(&adresse).serve(service).with_graceful_shutdown(signal_extinction());
