@@ -68,8 +68,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         requetes_en_cours,
     };
     
+	let actif_serveur_clone = actif_serveur.clone();
     let service = make_service_fn(|_conn| {
-        let actif_serveur = actif_serveur.clone();
+        let actif_serveur = actif_serveur_clone.clone();
         async move {
             Ok::<_, Infallible>(service_fn(move |req| {
                 gestion_connexion(
@@ -95,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .with_graceful_shutdown(signal_extinction());
     log::info!("Serveur démarré.");
     serveur.await?;
-    drop(actif_serveur);
+    //drop(actif_serveur);
     Ok(())
 }
 
