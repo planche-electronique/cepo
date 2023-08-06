@@ -1,5 +1,8 @@
 use std::fs;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
+use crate::planche::{Planche, MiseAJour};
+use crate::client::Client;
 
 pub mod client;
 pub mod ogn;
@@ -49,4 +52,32 @@ pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
         .unwrap();
         log::info!("Création du chemin {}/{}/{}", annee, mois_str, jour_str);
     }
+}
+
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct Configuration {
+    pub oaci: String,
+    pub f_synchronisation_secs: i32,
+    pub port: i32,
+    pub niveau_log: String,
+}
+
+impl Default for Configuration {
+    fn default() -> Self {
+        Self {
+            oaci: "LFLE".to_string(),
+            f_synchronisation_secs: 300,
+            port: 7878,
+            niveau_log: "info".to_string(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ActifServeur {
+    pub configuration: Configuration,
+    pub planche: Arc<Mutex<Planche>>,
+    pub majs: Arc<Mutex<Vec<MiseAJour>>>,
+    pub requetes_en_cours: Arc<Mutex<Vec<Client>>>,
 }
