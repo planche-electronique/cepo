@@ -117,18 +117,18 @@ impl Planche {
             "../site/dossier_de_travail/{}/{}/{}/affectations.json",
             annee, mois_str, jour_str
         ))
-        .unwrap();
-        let affectations_json = json::parse(&affectations_str).unwrap();
-        let pilote_tr = affectations_json["pilote_tr"].as_str().unwrap().to_string();
-        let treuil = affectations_json["treuil"].as_str().unwrap().to_string();
-        let pilote_rq = affectations_json["pilote_rq"].as_str().unwrap().to_string();
+        .unwrap_or_default();
+        let affectations_json = json::parse(&affectations_str).unwrap_or_else(|_| {json::JsonValue::Null});
+        let pilote_tr = affectations_json["pilote_tr"].as_str().unwrap_or_default().to_string();
+        let treuil = affectations_json["treuil"].as_str().unwrap_or_default().to_string();
+        let pilote_rq = affectations_json["pilote_rq"].as_str().unwrap_or_default().to_string();
         let remorqueur = affectations_json["remorqueur"]
             .as_str()
-            .unwrap()
+            .unwrap_or_default()
             .to_string();
         let chef_piste = affectations_json["chef_piste"]
             .as_str()
-            .unwrap()
+            .unwrap_or_default()
             .to_string();
 
         Ok(Planche {
