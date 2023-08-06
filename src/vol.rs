@@ -1,4 +1,4 @@
-use crate::{creer_chemin_jour, nom_fichier_date};
+use crate::{creer_chemin_jour, nom_fichier_date, ActifServeur};
 use crate::ogn::vols_ogn;
 use async_trait::async_trait;
 use chrono::{Datelike, NaiveDate, NaiveTime};
@@ -140,7 +140,7 @@ impl VolJson for Vec<Vol> {
 pub trait ChargementVols {
     fn enregistrer(&self, date: NaiveDate);
     fn depuis_disque(date: NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
-    async fn du(date:NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn du(date:NaiveDate, actif_serveur: &ActifServeur) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 #[async_trait]
@@ -241,9 +241,9 @@ impl ChargementVols for Vec<Vol> {
         Ok(vols)
     }
         
-    async fn du(date:NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn du(date:NaiveDate, actif_serveur: &ActifServeur) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
         let mut vols = Vec::depuis_disque(date).unwrap();
-        vols.mettre_a_jour(vols_ogn(date).await?);
+        vols.mettre_a_jour(vols_ogn(date, actif_serveur.configuration.oaci.clone()).await?);
         vols.enregistrer(date);
         Ok(vols)
     }

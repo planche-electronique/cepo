@@ -2,7 +2,7 @@ pub mod mise_a_jour;
 
 use crate::ogn::vols_ogn;
 use crate::vol::{ChargementVols, Vol, VolJson};
-use crate::{creer_chemin_jour, nom_fichier_date};
+use crate::{creer_chemin_jour, nom_fichier_date, ActifServeur};
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use json;
 use log;
@@ -27,24 +27,25 @@ impl Default for Planche {
 }
 
 impl Planche {
-    pub async fn du(date: NaiveDate) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn du(date: NaiveDate, actif_serveur: &ActifServeur) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
 
         creer_chemin_jour(annee, mois, jour);
         let mut planche = Planche::depuis_disque(date).unwrap();
-        planche.mettre_a_jour_ogn().await?;
+        planche.mettre_a_jour_ogn(actif_serveur).await?;
         planche.enregistrer();
         Ok(planche)
     }
 
     pub async fn mettre_a_jour_ogn(
         &mut self,
+        actif_serveur: &ActifServeur,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let date = chrono::Local::now().date_naive();
         //on teste les égalités et on remplace si besoin
-        let derniers_vols = vols_ogn(date).await?;
+        let derniers_vols = vols_ogn(date, actif_serveur.configuration.oaci.clone()).await?;
         let mut rang_prochain_vol = 0;
         let mut priorite_prochain_vol = 0;
         let ancienne_planche = self;

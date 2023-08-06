@@ -1,23 +1,20 @@
-use crate::planche::Planche;
 use crate::vol::{MettreAJour, Vol};
-use crate::Appareil;
+use crate::{Appareil, ActifServeur};
 use chrono::prelude::*;
 use json::JsonValue;
 use log;
-use std::sync::{Arc, Mutex};
 use std::fs;
 
-pub async fn vols_ogn(date: NaiveDate) -> Result<Vec<Vol>, hyper::Error> {
-    let airfield_code = "LFLE";
+pub async fn vols_ogn(date: NaiveDate, airfield_oaci: String) -> Result<Vec<Vol>, hyper::Error> {
     log::info!(
         "Requete à http://flightbook.glidernet.org/api/logbook/{}/{}",
-        airfield_code,
+        airfield_oaci,
         date.format("%Y-%m-%d").to_string()
     );
     let client = hyper::Client::new();
     let chemin = format!(
         "http://flightbook.glidernet.org/api/logbook/{}/{}",
-        airfield_code,
+        airfield_oaci,
         date.format("%Y-%m-%d")
     )
     .parse::<hyper::Uri>()
@@ -144,17 +141,17 @@ pub async fn vols_ogn(date: NaiveDate) -> Result<Vec<Vol>, hyper::Error> {
 }
 
 pub async fn synchronisation_ogn(
-    planche: Arc<Mutex<Planche>>,
+    actif_serveur: &ActifServeur,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let date = chrono::Local::now().date_naive();
-    let vols_ogn = vols_ogn(date).await?;
-    let planche_lock = planche.lock().unwrap();
+    let vols_ogn = vols_ogn(date, actif_serveur.configuration.oaci.clone()).await?;
+    let planche_lock = actif_serveur.planche.lock().unwrap();
     let mut ancienne_planche = (*planche_lock).clone();
     drop(planche_lock);
     //on teste les égalités et on remplace si besoin
     ancienne_planche.vols.mettre_a_jour(vols_ogn);
 
-    let mut planche_lock = planche.lock().unwrap();
+    let mut planche_lock = actif_serveur.planche.lock().unwrap();
     *planche_lock = ancienne_planche.clone();
     drop(planche_lock);
     ancienne_planche.enregistrer();
