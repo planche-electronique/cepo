@@ -1,14 +1,24 @@
+//! Stockage et méthodes associées à un client: une machine qui fait des requêtes en cours.
+
 use log;
 use std::sync::{Arc, Mutex};
 
+/// Trait qui permet de changer le nombre de requêtes associées à un [`Client`].
 pub trait VariationRequete {
+    /// Incrémente de 1 le compteur de requêtes en cours d'un [`Client`] et crée si besoin 
+    /// l'entrée pour celui-ci dans [`self`].
     fn incrementer(&mut self, adresse: String);
+    /// Décrémente de 1 le compteur de requêtes en cours d'un [`Client`] et supprime si besoin
+    /// l'entrée de celui-ci dans [`self`].
     fn decrementer(&mut self, adresse: String);
 }
 
+/// Structure associée à un client.
 #[derive(Clone, PartialEq)]
 pub struct Client {
+    /// L'adresse ip du client.
     adresse: String,
+    /// Le nombre de requêtes que le client a faite et qui sont en cours de traitement.
     requetes_en_cours: i32,
 }
 
