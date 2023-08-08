@@ -1,3 +1,5 @@
+//! Tout ce qui attrait aux vols que nous enregistrons.
+
 use crate::{creer_chemin_jour, nom_fichier_date, ActifServeur};
 use crate::ogn::vols_ogn;
 use async_trait::async_trait;
@@ -5,17 +7,28 @@ use chrono::{Datelike, NaiveDate, NaiveTime};
 use json::JsonValue;
 use std::fs;
 
+/// Représentation en mémoire d'un vol. Se référer à infos.json pour les différents codes.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Vol {
+    /// Le numéro de son vol venant d'ogn.
     pub numero_ogn: i32,
+    /// Le code de décollage (T: treuillée, R: remorqué)
     pub code_decollage: String,
+    /// La machine qui a fait le décollage (voir dans infos.json/remrorqueurs & infos.json/treuils).
     pub machine_decollage: String,
+    /// La personne qui était dans la machine de décollage (voir infos.json/pilotes_tr & infos.json/pilote_rq).
     pub decolleur: String,
+    /// L'immatriculation du planeur.
     pub aeronef: String,
+    /// Le code du vol : Mutuel, Ecole etc.
     pub code_vol: String,
+    /// Le nom du commandant de bord ou de l'élève.
     pub pilote1: String,
+    /// Le nom de l'éventiuel passager ou de l'instructeur.
     pub pilote2: String,
+    /// L'heure de décollage au format hh:mm.
     pub decollage: NaiveTime,
+    /// L'heure d'atterissage au format hh:mm.
     pub atterissage: NaiveTime,
 }
 
@@ -52,6 +65,7 @@ impl Vol {
         }
     }
 
+    /// Encode le vol en JSON.
     pub fn vers_json(&self) -> String {
         let vol = json::object! {
             numero_ogn: self.numero_ogn,
@@ -67,7 +81,8 @@ impl Vol {
         };
         vol.dump()
     }
-
+    /// Décode un vol depuis un JsonValue, qui peut être lui-même parsé en utilisant
+    /// json::parse!(string).
     pub fn depuis_json(mut json_parse: JsonValue) -> Self {
         Vol {
             numero_ogn: json_parse["numero_ogn"].as_i32().unwrap_or_default(),
@@ -106,8 +121,12 @@ impl Vol {
     }
 }
 
+/// Un trait qui permet d'encoder/décoder des vols en JSON.
 pub trait VolJson {
+    /// Permet d'encoder un vol en JSON.
     fn vers_json(self) -> String;
+    /// Décode un vol depuis un JsonValue, qui peut être lui-même parsé en utilisant
+    /// json::parse!(string).
     fn depuis_json(&mut self, json: JsonValue);
 }
 
@@ -136,10 +155,14 @@ impl VolJson for Vec<Vol> {
     }
 }
 
+/// Interactions enter le disque et des vols, généralement sous la forme d'un Vec\<Vol\>.
 #[async_trait]
 pub trait ChargementVols {
+    /// Enregistrer des vols sur le disque à partir d'une date à l'adresse `../site/dossier_de_travail/annee/mois/jour`.
     fn enregistrer(&self, date: NaiveDate);
+    /// Charger des vols sur le disque à partir d'une date à l'adresse `../site/dossier_de_travail/annee/mois/jour`.
     fn depuis_disque(date: NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
+    /// Charge les vols depuis le disque et les mets égalemen à jour par une requête au serveur OGN.
     async fn du(date:NaiveDate, actif_serveur: &ActifServeur) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
@@ -249,8 +272,9 @@ impl ChargementVols for Vec<Vol> {
     }
 }
 
-
+/// Un trait pour ajouter les nouvelles valeurs d'heures à un vol sans changer ses champs rentrés et fixes (ex: pilote).
 pub trait MettreAJour {
+    /// ajouter les nouvelles valeurs d'heures à un vol sans changer ses champs rentrés et fixes (ex: pilote).
     fn mettre_a_jour(&mut self, nouveaux_vols: Vec<Vol>);
 }
 
