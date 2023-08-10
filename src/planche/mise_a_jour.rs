@@ -1,11 +1,20 @@
+//! Gestion des mise à jour: envoi des modifications par champ de vol pour éviter de recharger
+//! toute la planche à chaque fois
+
 use chrono::{NaiveDate, NaiveTime};
 
+/// Représentation en mémoire d'une "planche".
 #[derive(Debug, PartialEq, Clone)]
 pub struct MiseAJour {
+    /// Le numero du vol sur OGN.
     pub numero_ogn: i32,
+    /// Le nom du champ qui a été changé.
     pub champ_mis_a_jour: String,
+    /// La nouvelle valeur de ce champ.
     pub nouvelle_valeur: String,
+    /// La date du vol sur lequel le changement est fait.
     pub date: NaiveDate,
+    /// L'heure à laquelle la requete est faite.
     pub heure: NaiveTime,
 }
 
@@ -16,6 +25,7 @@ impl Default for MiseAJour {
 }
 
 impl MiseAJour {
+    /// Nouvelle mise à jour.
     pub fn new() -> Self {
         MiseAJour {
             numero_ogn: i32::default(), //numero du vol **OGN**
@@ -25,7 +35,7 @@ impl MiseAJour {
             heure: NaiveTime::default(),
         }
     }
-
+    /// Pour parser une mise à jour depuis un texte json, préalablement parsé à l'aide de [`json::parse()`].
     pub fn parse(&mut self, texte_json: json::JsonValue) -> Result<(), String> {
         match texte_json {
             json::JsonValue::Object(objet) => {
@@ -68,6 +78,7 @@ impl MiseAJour {
         Ok(())
     }
 
+    /// Pour encoder en Json.
     pub fn vers_json(&self) -> String {
         json::object! {
             numero_ogn: self.numero_ogn,
@@ -80,7 +91,9 @@ impl MiseAJour {
     }
 }
 
+/// S'occupe des relations entre plusieurs mises à jour et Json.
 pub trait MiseAJourJson {
+    /// Encode plusieurs mises à jour en Json.
     fn vers_json(&self) -> String;
 }
 
@@ -100,7 +113,9 @@ impl MiseAJourJson for Vec<MiseAJour> {
     }
 }
 
+/// S'occupe des mises a jour trop vieilles.
 pub trait MiseAJourObsoletes {
+    /// Pour supprimer les mises a jour de plus d'un certain temps.
     fn enlever_majs_obsoletes(&mut self, temps: chrono::Duration);
 }
 

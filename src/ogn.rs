@@ -1,3 +1,5 @@
+//! Pour gérer les requêtes à OGN.
+
 use crate::vol::{MettreAJour, Vol};
 use crate::{Appareil, ActifServeur};
 use chrono::prelude::*;
@@ -5,6 +7,7 @@ use json::JsonValue;
 use log;
 use std::fs;
 
+/// Retourne les vols récupérés par requête GET à OGN.
 pub async fn vols_ogn(date: NaiveDate, airfield_oaci: String) -> Result<Vec<Vol>, hyper::Error> {
     log::info!(
         "Requete à http://flightbook.glidernet.org/api/logbook/{}/{}",
@@ -140,6 +143,7 @@ pub async fn vols_ogn(date: NaiveDate, airfield_oaci: String) -> Result<Vec<Vol>
     Ok(vols)
 }
 
+/// Synchronise le serveur notamment en faisant une requête à OGN et en mettant à jour la planche du jour.
 pub async fn synchronisation_ogn(
     actif_serveur: &ActifServeur,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
