@@ -35,7 +35,7 @@ impl MiseAJour {
             heure: NaiveTime::default(),
         }
     }
-    /// Pour parser une mise à jour depuis un texte json, préalablement parsé à l'aide de [`json::parse!`].
+    /// Pour parser une mise à jour depuis un texte json, préalablement parsé à l'aide de [`json::parse()`].
     pub fn parse(&mut self, texte_json: json::JsonValue) -> Result<(), String> {
         match texte_json {
             json::JsonValue::Object(objet) => {

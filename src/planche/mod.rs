@@ -1,3 +1,5 @@
+//! Module des planche, i.e. un ensemble de plusieurs [`Vol`] et d'affectation.
+
 pub mod mise_a_jour;
 
 use crate::ogn::vols_ogn;
@@ -9,14 +11,22 @@ use log;
 pub use mise_a_jour::MiseAJour;
 use std::fs;
 
+/// Représentation des données de vol d'une journée, en cours.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Planche {
+    /// Tous les vols d'un jour.
     pub vols: Vec<Vol>,
+    /// La date de ce jour.
     pub date: NaiveDate,
+    /// le pilote de treuil.
     pub pilote_tr: String,  // parmi pilotes_tr
+    /// Le treuil en service.
     pub treuil: String,     // parmi treuils
+    /// Le pilote de remorqueur en service.
     pub pilote_rq: String,  // parmi pilotes_rq
+    /// Le remorqueur en service.
     pub remorqueur: String, // parmi remorqueurs
+    /// Le chef de piste en service.
     pub chef_piste: String, // parmi pilotes
 }
 
@@ -27,6 +37,7 @@ impl Default for Planche {
 }
 
 impl Planche {
+    /// Vols chargés depuis le disque et mis à jour depuis OGN.
     pub async fn du(date: NaiveDate, actif_serveur: &ActifServeur) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
         let annee = date.year();
         let mois = date.month();
@@ -39,6 +50,7 @@ impl Planche {
         Ok(planche)
     }
 
+    /// Mise à jour de la planche à l'aide d'une requête OGN.
     pub async fn mettre_a_jour_ogn(
         &mut self,
         actif_serveur: &ActifServeur,
@@ -96,6 +108,7 @@ impl Planche {
         Ok(())
     }
 
+    /// Chargement de la planche depuis le disque.
     pub fn depuis_disque(
         date: NaiveDate,
     ) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
@@ -141,7 +154,7 @@ impl Planche {
             chef_piste,
         })
     }
-
+    /// Enregistrement de la planche sur le disque
     pub fn enregistrer(&self) {
         let date = self.date;
         let annee = date.year();
@@ -172,7 +185,7 @@ impl Planche {
             })
         }
     }
-
+    /// Une nouvelle planche.
     pub fn new() -> Self {
         Planche {
             vols: Vec::new(),
@@ -185,6 +198,7 @@ impl Planche {
         }
     }
 
+    /// Encodage de la planche en Json.
     pub fn vers_json(self) -> String {
         let vols_json = self.vols.vers_json();
         let date_json = self.date.format("%Y/%m/%d").to_string();
@@ -208,7 +222,9 @@ impl Planche {
     }
 }
 
+/// Mise à jour d'une planche à l'aide d'une [`MiseAJour`].
 pub trait MettreAJour {
+    /// Mise à jour d'une planche à l'aide d'une [`MiseAJour`].
     fn mettre_a_jour(&mut self, mise_a_jour: MiseAJour);
 }
 
