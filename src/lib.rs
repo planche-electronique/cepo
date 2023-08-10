@@ -29,8 +29,9 @@ pub struct Appareil {
 /// Ajoute un 0 devant le nombre s'il est inférieur à 10 pour avoir des strings à 2 chiffres et à longueur fixe.
 /// # Exemple
 /// ```
-/// assert_eq(nom_fichier_date(2), String::from("02"));
-/// assert_eq(nom_fichier_date(20), String::from("20"));
+/// use serveur::nom_fichier_date;
+/// assert_eq!(nom_fichier_date(2), String::from("02"));
+/// assert_eq!(nom_fichier_date(20), String::from("20"));
 /// ```
 pub fn nom_fichier_date(nombre: i32) -> String {
     if nombre > 9 {
