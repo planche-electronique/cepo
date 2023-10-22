@@ -46,9 +46,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let adresse = SocketAddr::from(([127, 0, 0, 1], configuration.clone().port as u16));
 
     // creation du dossier de travail si besoin
-    if !(Path::new("../site/dossier_de_travail").exists()) {
+    if !(Path::new("../planche/dossier_de_travail").exists()) {
         log::info!("Création du dossier de travail.");
-        fs::create_dir("../site/dossier_de_travail").unwrap();
+        fs::create_dir("../planche/dossier_de_travail").unwrap();
         log::info!("Dossier de travail créé.");
     }
 
@@ -108,7 +108,7 @@ async fn gestion_connexion(
 
     actif_serveur.requetes_en_cours.clone().incrementer(adresse.clone());
 
-    let chemin = format!("../site{}", req.uri().path());
+    let chemin = format!("../planche{}", req.uri().path());
     let (parties, body) = req.into_parts();
     let corps_str = std::str::from_utf8(&hyper::body::to_bytes(body).await?)
         .unwrap()
@@ -120,9 +120,9 @@ async fn gestion_connexion(
 
     match parties.method {
         Method::GET => {
-            if chemin == *"../site/" {
-                *reponse.body_mut() = Body::from(fs::read_to_string("../site/index.html").unwrap());
-            } else if chemin == *"../site/majs" {
+            if chemin == *"../planche/" {
+                *reponse.body_mut() = Body::from(fs::read_to_string("../planche/index.html").unwrap());
+            } else if chemin == *"../planche/majs" {
                 reponse
                     .headers_mut()
                     .insert(CONTENT_TYPE, "application/json".parse().unwrap());
@@ -138,7 +138,7 @@ async fn gestion_connexion(
                 (*majs_lock).enlever_majs_obsoletes(chrono::Duration::minutes(5));
                 drop(majs_lock);
                 *reponse.body_mut() = Body::from(majs.vers_json());
-            } else if &(chemin[8..12]) == "vols" {
+            } else if &(chemin[11..15]) == "vols" {
                 reponse
                     .headers_mut()
                     .insert(CONTENT_TYPE, "application/json".parse().unwrap());
@@ -149,14 +149,14 @@ async fn gestion_connexion(
                 reponse
                     .headers_mut()
                     .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-                let date_str = &chemin[12..23];
+                let date_str = &chemin[15..26];
                 let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
 
                 let vols: Vec<Vol> = Vec::du(date, &actif_serveur).await?;
                 *reponse.body_mut() = Body::from(vols.vers_json());
 
             //fichier de vols "émulé"
-            } else if &(chemin[8..15]) == "planche" {
+            } else if &(chemin[11..18]) == "planche" {
                 reponse
                     .headers_mut()
                     .insert(CONTENT_TYPE, "application/json".parse().unwrap());
@@ -191,9 +191,9 @@ async fn gestion_connexion(
                         .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
                 }
                 *reponse.body_mut() = Body::from(
-                    fs::read_to_string(format!("../site/{}", chemin)).unwrap_or_else(|_| {
+                    fs::read_to_string(format!("../planche/{}", chemin)).unwrap_or_else(|_| {
                         *reponse.status_mut() = StatusCode::NOT_FOUND;
-                        fs::read_to_string("../site/404.html").unwrap_or_else(|err| {
+                        fs::read_to_string("../planche/404.html").unwrap_or_else(|err| {
                             log::info!("pas de 404.html !! : {}", err);
                             "".to_string()
                         })
@@ -203,7 +203,7 @@ async fn gestion_connexion(
         }
 
         Method::POST => {
-            if chemin == "../site/mise_a_jour" {
+            if chemin == "../planche/mise_a_jour" {
                 // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
                 let mut mise_a_jour = MiseAJour::new();
                 let mut corps_json_nettoye = String::new(); //necessite de creer une string qui va contenir

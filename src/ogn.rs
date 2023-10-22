@@ -76,7 +76,7 @@ pub async fn vols_ogn(date: NaiveDate, airfield_oaci: String) -> Result<Vec<Vol>
         }
     };
 
-    let contenu_fichier = fs::read_to_string("../site/infos.json").unwrap();
+    let contenu_fichier = fs::read_to_string("../planche/infos.json").unwrap();
     let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
     let immatriculations_json = &fichier_parse["immatriculations"];
     let iter_fichier = immatriculations_json.members();

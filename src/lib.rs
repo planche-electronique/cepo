@@ -41,23 +41,23 @@ pub fn nom_fichier_date(nombre: i32) -> String {
     }
 }
 
-/// Permet de créer le chemin du jour à "../site/dossier_de_travail/annee/mois/jour".
+/// Permet de créer le chemin du jour à "../planche/dossier_de_travail/annee/mois/jour".
 pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
     let jour_str = nom_fichier_date(jour as i32);
     let mois_str = nom_fichier_date(mois as i32);
 
-    if !(Path::new(format!("../site/dossier_de_travail/{}", annee).as_str()).exists()) {
-        fs::create_dir(format!("../site/dossier_de_travail/{}", annee)).unwrap();
+    if !(Path::new(format!("../planche/dossier_de_travail/{}", annee).as_str()).exists()) {
+        fs::create_dir(format!("../planche/dossier_de_travail/{}", annee)).unwrap();
     }
 
-    if !(Path::new(format!("../site/dossier_de_travail/{}/{}", annee, mois_str).as_str()).exists())
+    if !(Path::new(format!("../planche/dossier_de_travail/{}/{}", annee, mois_str).as_str()).exists())
     {
-        fs::create_dir(format!("../site/dossier_de_travail/{}/{}", annee, mois_str)).unwrap();
+        fs::create_dir(format!("../planche/dossier_de_travail/{}/{}", annee, mois_str)).unwrap();
     }
 
     if !(Path::new(
         format!(
-            "../site/dossier_de_travail/{}/{}/{}",
+            "../planche/dossier_de_travail/{}/{}/{}",
             annee, mois_str, jour_str
         )
         .as_str(),
@@ -65,7 +65,7 @@ pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
     .exists())
     {
         fs::create_dir(format!(
-            "../site/dossier_de_travail/{}/{}/{}",
+            "../planche/dossier_de_travail/{}/{}/{}",
             annee, mois_str, jour_str
         ))
         .unwrap();

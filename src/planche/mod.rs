@@ -127,7 +127,7 @@ impl Planche {
 
         let vols: Vec<Vol> = Vec::depuis_disque(date).unwrap();
         let affectations_str = fs::read_to_string(format!(
-            "../site/dossier_de_travail/{}/{}/{}/affectations.json",
+            "../planche/dossier_de_travail/{}/{}/{}/affectations.json",
             annee, mois_str, jour_str
         ))
         .unwrap_or_default();
@@ -167,10 +167,9 @@ impl Planche {
         self.vols.enregistrer(date);
 
         let chemin = format!(
-            "../site/dossier_de_travail/{}/{}/{}/affectations.json",
+            "../planche/dossier_de_travail/{}/{}/{}/affectations.json",
             annee, mois_str, jour_str
         );
-        log::info!("Enregistrement des affectations du {annee}/{mois_str}/{jour_str}");
         let affectations_fichier = fs::read_to_string(chemin.clone()).unwrap_or_default();
         let affectations = json::object! {
             "pilote_tr": self.pilote_tr.clone(),
@@ -184,6 +183,7 @@ impl Planche {
                 log::error!("Impossible d'écrire les affectations : {}", err);
             })
         }
+        log::info!("Affectations du {annee}/{mois_str}/{jour_str} enregistrees.");
     }
     /// Une nouvelle planche.
     pub fn new() -> Self {

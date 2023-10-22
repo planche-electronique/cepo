@@ -158,9 +158,9 @@ impl VolJson for Vec<Vol> {
 /// Interactions enter le disque et des vols, généralement sous la forme d'un Vec\<Vol\>.
 #[async_trait]
 pub trait ChargementVols {
-    /// Enregistrer des vols sur le disque à partir d'une date à l'adresse `../site/dossier_de_travail/annee/mois/jour`.
+    /// Enregistrer des vols sur le disque à partir d'une date à l'adresse `../planche/dossier_de_travail/annee/mois/jour`.
     fn enregistrer(&self, date: NaiveDate);
-    /// Charger des vols sur le disque à partir d'une date à l'adresse `../site/dossier_de_travail/annee/mois/jour`.
+    /// Charger des vols sur le disque à partir d'une date à l'adresse `../planche/dossier_de_travail/annee/mois/jour`.
     fn depuis_disque(date: NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
     /// Charge les vols depuis le disque et les mets égalemen à jour par une requête au serveur OGN.
     async fn du(date:NaiveDate, actif_serveur: &ActifServeur) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
@@ -189,7 +189,7 @@ impl ChargementVols for Vec<Vol> {
         for (index, vol) in vols.iter().enumerate() {
             let index_str = nom_fichier_date(index as i32);
             let chemin = format!(
-                "../site/dossier_de_travail/{}/{}/{}/{}.json",
+                "../planche/dossier_de_travail/{}/{}/{}/{}.json",
                 annee, mois_str, jour_str, index_str
             );
             let mut fichier = String::new();
@@ -233,7 +233,7 @@ impl ChargementVols for Vec<Vol> {
         creer_chemin_jour(annee, mois, jour);
 
         let fichiers = fs::read_dir(format!(
-            "../site/dossier_de_travail/{}/{}/{}/",
+            "../planche/dossier_de_travail/{}/{}/{}/",
             annee, mois_str, jour_str
         ))
         .unwrap();   
@@ -243,7 +243,7 @@ impl ChargementVols for Vec<Vol> {
             let chemin_fichier = fichier.unwrap().file_name().into_string().unwrap();
             if chemin_fichier.clone() != *"affectations.json" {
                 let vol_json = fs::read_to_string(format!(
-                    "../site/dossier_de_travail/{}/{}/{}/{}",
+                    "../planche/dossier_de_travail/{}/{}/{}/{}",
                     annee,
                     mois_str,
                     jour_str,
