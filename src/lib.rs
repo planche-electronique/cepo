@@ -7,7 +7,7 @@
 use crate::client::Client;
 use crate::planche::{MiseAJour, Planche};
 use std::fs;
-use std::path::Path;
+
 use std::sync::{Arc, Mutex};
 
 use dirs;
