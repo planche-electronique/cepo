@@ -19,11 +19,11 @@ pub struct Planche {
     /// La date de ce jour.
     pub date: NaiveDate,
     /// le pilote de treuil.
-    pub pilote_tr: String,  // parmi pilotes_tr
+    pub pilote_tr: String, // parmi pilotes_tr
     /// Le treuil en service.
-    pub treuil: String,     // parmi treuils
+    pub treuil: String, // parmi treuils
     /// Le pilote de remorqueur en service.
-    pub pilote_rq: String,  // parmi pilotes_rq
+    pub pilote_rq: String, // parmi pilotes_rq
     /// Le remorqueur en service.
     pub remorqueur: String, // parmi remorqueurs
     /// Le chef de piste en service.
@@ -38,7 +38,10 @@ impl Default for Planche {
 
 impl Planche {
     /// Vols chargés depuis le disque et mis à jour depuis OGN.
-    pub async fn du(date: NaiveDate, actif_serveur: &ActifServeur) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn du(
+        date: NaiveDate,
+        actif_serveur: &ActifServeur,
+    ) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
@@ -126,15 +129,26 @@ impl Planche {
         let jour_str = nom_fichier_date(jour as i32);
 
         let vols: Vec<Vol> = Vec::depuis_disque(date).unwrap();
-        let affectations_str = fs::read_to_string(format!(
-            "../planche/dossier_de_travail/{}/{}/{}/affectations.json",
+        let mut affectations_path = crate::data_dir();
+        affectations_path.push(format!(
+            "{}/{}/{}/affectations.json",
             annee, mois_str, jour_str
-        ))
-        .unwrap_or_default();
-        let affectations_json = json::parse(&affectations_str).unwrap_or_else(|_| {json::JsonValue::Null});
-        let pilote_tr = affectations_json["pilote_tr"].as_str().unwrap_or_default().to_string();
-        let treuil = affectations_json["treuil"].as_str().unwrap_or_default().to_string();
-        let pilote_rq = affectations_json["pilote_rq"].as_str().unwrap_or_default().to_string();
+        ));
+        let affectations_str = fs::read_to_string(affectations_path).unwrap_or_default();
+        let affectations_json =
+            json::parse(&affectations_str).unwrap_or_else(|_| json::JsonValue::Null);
+        let pilote_tr = affectations_json["pilote_tr"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string();
+        let treuil = affectations_json["treuil"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string();
+        let pilote_rq = affectations_json["pilote_rq"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string();
         let remorqueur = affectations_json["remorqueur"]
             .as_str()
             .unwrap_or_default()
@@ -166,11 +180,12 @@ impl Planche {
 
         self.vols.enregistrer(date);
 
-        let chemin = format!(
-            "../planche/dossier_de_travail/{}/{}/{}/affectations.json",
+        let mut affectations_path = crate::data_dir();
+        affectations_path.push(format!(
+            "{}/{}/{}/affectations.json",
             annee, mois_str, jour_str
-        );
-        let affectations_fichier = fs::read_to_string(chemin.clone()).unwrap_or_default();
+        ));
+        let affectations_fichier = fs::read_to_string(&affectations_path).unwrap_or_default();
         let affectations = json::object! {
             "pilote_tr": self.pilote_tr.clone(),
             "treuil": self.treuil.clone(),
@@ -179,9 +194,11 @@ impl Planche {
             "chef_piste": self.chef_piste.clone(),
         };
         if json::stringify(affectations.clone()) != affectations_fichier {
-            fs::write(chemin.clone(), json::stringify(affectations.clone())).unwrap_or_else(|err| {
-                log::error!("Impossible d'écrire les affectations : {}", err);
-            })
+            fs::write(&affectations_path, json::stringify(affectations.clone())).unwrap_or_else(
+                |err| {
+                    log::error!("Impossible d'écrire les affectations : {}", err);
+                },
+            )
         }
         log::info!("Affectations du {annee}/{mois_str}/{jour_str} enregistrees.");
     }

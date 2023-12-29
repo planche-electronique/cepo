@@ -1,15 +1,16 @@
 #![warn(missing_docs)]
 
-
 //! Utilisation facile et rapide des donnéess d'OGN pour enregistrer décollages et atterissages de vols en planeur.
 //! Il vous suffit de fournir les données sous forme de tableau des pilotes, planeurs, remorqueurs et treuilleurs de votre club.
 //! La planche fonctionnera alors.
 
+use crate::client::Client;
+use crate::planche::{MiseAJour, Planche};
 use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use crate::planche::{Planche, MiseAJour};
-use crate::client::Client;
+
+use dirs;
 
 pub mod client;
 pub mod ogn;
@@ -41,39 +42,31 @@ pub fn nom_fichier_date(nombre: i32) -> String {
     }
 }
 
-/// Permet de créer le chemin du jour à "../planche/dossier_de_travail/annee/mois/jour".
+/// Permet de créer le chemin du jour à "$XDG_DATA_DIR/cepo/annee/mois/jour".
 pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
     let jour_str = nom_fichier_date(jour as i32);
     let mois_str = nom_fichier_date(mois as i32);
 
-    if !(Path::new(format!("../planche/dossier_de_travail/{}", annee).as_str()).exists()) {
-        fs::create_dir(format!("../planche/dossier_de_travail/{}", annee)).unwrap();
-    }
+    let mut path_tmp = crate::data_dir();
+    path_tmp.push(annee.to_string());
 
-    if !(Path::new(format!("../planche/dossier_de_travail/{}/{}", annee, mois_str).as_str()).exists())
-    {
-        fs::create_dir(format!("../planche/dossier_de_travail/{}/{}", annee, mois_str)).unwrap();
+    if !path_tmp.as_path().exists() {
+        fs::create_dir(&path_tmp).unwrap();
     }
+    path_tmp.push(&mois_str);
 
-    if !(Path::new(
-        format!(
-            "../planche/dossier_de_travail/{}/{}/{}",
-            annee, mois_str, jour_str
-        )
-        .as_str(),
-    )
-    .exists())
-    {
-        fs::create_dir(format!(
-            "../planche/dossier_de_travail/{}/{}/{}",
-            annee, mois_str, jour_str
-        ))
-        .unwrap();
-        log::info!("Création du chemin {}/{}/{}", annee, mois_str, jour_str);
+    if !path_tmp.as_path().exists() {
+        fs::create_dir(&path_tmp).unwrap();
+    }
+    path_tmp.push(&jour_str);
+
+    if !path_tmp.exists() {
+        fs::create_dir(path_tmp).unwrap();
+        log::info!("Création du chemin {}/{}/{}", annee, &mois_str, &jour_str);
     }
 }
 
-/// Permet de stocker et partager la configuration du serveur. Elle est chargée grâce à 
+/// Permet de stocker et partager la configuration du serveur. Elle est chargée grâce à
 /// [confy](https://crates.io/crates/confy). Elle a une valeur par défaut qui est écrite si le
 /// fichier de confiuration est inexistant.
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -113,4 +106,13 @@ pub struct ActifServeur {
     pub majs: Arc<Mutex<Vec<MiseAJour>>>,
     /// Un vecteur qui permet de comptabiliser le nombre de requêtes en cours pour éviter les ddos.
     pub requetes_en_cours: Arc<Mutex<Vec<Client>>>,
+}
+
+fn data_dir() -> std::path::PathBuf {
+    let mut data_dir = dirs::data_dir().expect(
+        "Couldn't guess where to store files. Check your os compatibility \
+            with dirs (https://crates.io/crates/dirs) crate.",
+    );
+    data_dir.push("cepo");
+    data_dir
 }

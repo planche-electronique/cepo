@@ -1,7 +1,7 @@
 //! Tout ce qui attrait aux vols que nous enregistrons.
 
-use crate::{creer_chemin_jour, nom_fichier_date, ActifServeur};
 use crate::ogn::vols_ogn;
+use crate::{creer_chemin_jour, data_dir, nom_fichier_date, ActifServeur};
 use async_trait::async_trait;
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use json::JsonValue;
@@ -158,12 +158,16 @@ impl VolJson for Vec<Vol> {
 /// Interactions enter le disque et des vols, généralement sous la forme d'un Vec\<Vol\>.
 #[async_trait]
 pub trait ChargementVols {
-    /// Enregistrer des vols sur le disque à partir d'une date à l'adresse `../planche/dossier_de_travail/annee/mois/jour`.
+    /// Enregistrer des vols sur le disque à partir d'une date à l'adresse `$XDG_DATA_DIR/cepo/annee/mois/jour`.
     fn enregistrer(&self, date: NaiveDate);
-    /// Charger des vols sur le disque à partir d'une date à l'adresse `../planche/dossier_de_travail/annee/mois/jour`.
-    fn depuis_disque(date: NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
+    /// Charger des vols sur le disque à partir d'une date à l'adresse `$XDG_DATA_DIR/cepo/annee/mois/jour`.
+    fn depuis_disque(date: NaiveDate)
+        -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
     /// Charge les vols depuis le disque et les mets égalemen à jour par une requête au serveur OGN.
-    async fn du(date:NaiveDate, actif_serveur: &ActifServeur) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn du(
+        date: NaiveDate,
+        actif_serveur: &ActifServeur,
+    ) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 #[async_trait]
@@ -188,17 +192,16 @@ impl ChargementVols for Vec<Vol> {
 
         for (index, vol) in vols.iter().enumerate() {
             let index_str = nom_fichier_date(index as i32);
-            let chemin = format!(
-                "../planche/dossier_de_travail/{}/{}/{}/{}.json",
-                annee, mois_str, jour_str, index_str
-            );
+
+            let mut vols_path = crate::data_dir();
+            vols_path.push(format!("{annee}/{mois_str}/{jour_str}/{index_str}.json"));
             let mut fichier = String::new();
-            if std::path::Path::new(chemin.clone().as_str()).exists() {
-                fichier = fs::read_to_string(chemin.clone()).unwrap_or_else(|err| {
+            if vols_path.exists() {
+                fichier = fs::read_to_string(&vols_path).unwrap_or_else(|err| {
                     log::error!(
-                        "fichier numero {} de chemin {} introuvable ou non ouvrable : {}",
+                        "fichier numero {} de chemin {:?} introuvable ou non ouvrable : {}",
                         index,
-                        chemin.clone(),
+                        &vols_path,
                         err.to_string()
                     );
                     "".to_string()
@@ -206,7 +209,7 @@ impl ChargementVols for Vec<Vol> {
             }
 
             if fichier != vol.vers_json() {
-                fs::write(chemin, vol.vers_json()).unwrap_or_else(|err| {
+                fs::write(&vols_path, vol.vers_json()).unwrap_or_else(|err| {
                     log::error!(
                         "Impossible d'écrire le fichier du jour {}/{}/{} et d'index {} : {}",
                         annee,
@@ -220,7 +223,9 @@ impl ChargementVols for Vec<Vol> {
         }
     }
 
-    fn depuis_disque(date: NaiveDate) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
+    fn depuis_disque(
+        date: NaiveDate,
+    ) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
@@ -231,30 +236,17 @@ impl ChargementVols for Vec<Vol> {
         log::info!("Lecture des fichiers de vol du {annee}/{mois_str}/{jour_str}");
 
         creer_chemin_jour(annee, mois, jour);
-
-        let fichiers = fs::read_dir(format!(
-            "../planche/dossier_de_travail/{}/{}/{}/",
-            annee, mois_str, jour_str
-        ))
-        .unwrap();   
+        let mut chemin = data_dir();
+        chemin.push(format!("{}/{}/{}/", annee, mois_str, jour_str));
+        let fichiers = fs::read_dir(&chemin).expect(&format!("Couldn't load {:?}", chemin.clone()));
         let mut vols: Vec<Vol> = Vec::new();
 
         for fichier in fichiers {
-            let chemin_fichier = fichier.unwrap().file_name().into_string().unwrap();
-            if chemin_fichier.clone() != *"affectations.json" {
-                let vol_json = fs::read_to_string(format!(
-                    "../planche/dossier_de_travail/{}/{}/{}/{}",
-                    annee,
-                    mois_str,
-                    jour_str,
-                    chemin_fichier.clone()
-                ))
-                .unwrap_or_else(|err| {
-                    log::error!(
-                        "Impossible d'ouvrir le fichier {} : {}",
-                        chemin_fichier.clone(),
-                        err
-                    );
+            let file_name = fichier.unwrap().file_name().into_string().unwrap();
+            let file_path = chemin.as_path().join(std::path::Path::new(&file_name));
+            if &file_name != "affectations.json" {
+                let vol_json = fs::read_to_string(file_path).unwrap_or_else(|err| {
+                    log::error!("Impossible d'ouvrir le fichier {} : {}", file_name, err);
                     String::from("")
                 });
                 let vol = Vol::depuis_json(json::parse(vol_json.as_str()).unwrap());
@@ -263,8 +255,11 @@ impl ChargementVols for Vec<Vol> {
         }
         Ok(vols)
     }
-        
-    async fn du(date:NaiveDate, actif_serveur: &ActifServeur) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
+
+    async fn du(
+        date: NaiveDate,
+        actif_serveur: &ActifServeur,
+    ) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
         let mut vols = Vec::depuis_disque(date).unwrap();
         vols.mettre_a_jour(vols_ogn(date, actif_serveur.configuration.oaci.clone()).await?);
         vols.enregistrer(date);

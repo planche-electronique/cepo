@@ -22,10 +22,12 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use hyper::{Method, StatusCode};
 
+use dirs;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //initialisation des outils cli (confy, log, panic)
-    let configuration = confy::load("serveur", None).unwrap_or_else(|err| {
+    let configuration = confy::load("cepo", None).unwrap_or_else(|err| {
         log::warn!(
             "Fichier de configuration non trouvé, utilisation de défaut : {}",
             err
@@ -44,11 +46,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     //let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
     let adresse = SocketAddr::from(([127, 0, 0, 1], configuration.clone().port as u16));
-
+    let mut data_dir = dirs::data_dir().unwrap();
+    data_dir.push("cepo");
     // creation du dossier de travail si besoin
-    if !(Path::new("../planche/dossier_de_travail").exists()) {
-        log::info!("Création du dossier de travail.");
-        fs::create_dir("../planche/dossier_de_travail").unwrap();
+    if !(data_dir.as_path().exists()) {
+        fs::create_dir(data_dir.as_path()).expect("Could not create data_dir on your platform.");
         log::info!("Dossier de travail créé.");
     }
 
@@ -67,16 +69,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         majs: majs_arc,
         requetes_en_cours,
     };
-    
-	let actif_serveur_clone = actif_serveur.clone();
+
+    let actif_serveur_clone = actif_serveur.clone();
     let service = make_service_fn(|_conn| {
         let actif_serveur = actif_serveur_clone.clone();
         async move {
             Ok::<_, Infallible>(service_fn(move |req| {
-                gestion_connexion(
-                    req,
-                    actif_serveur.clone(),
-                )
+                gestion_connexion(req, actif_serveur.clone())
             }))
         }
     });
@@ -86,7 +85,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         loop {
             synchronisation_ogn(&actif_serveur).await.unwrap();
             tokio::time::sleep(tokio::time::Duration::from_secs(
-                actif_serveur.clone().configuration.clone().f_synchronisation_secs as u64,
+                actif_serveur
+                    .clone()
+                    .configuration
+                    .clone()
+                    .f_synchronisation_secs as u64,
             ))
             .await; //5 minutes
         }
@@ -106,23 +109,41 @@ async fn gestion_connexion(
 ) -> Result<Response<Body>, Box<dyn std::error::Error + Send + Sync>> {
     let adresse = req.uri().path().to_string().clone();
 
-    actif_serveur.requetes_en_cours.clone().incrementer(adresse.clone());
+    actif_serveur
+        .requetes_en_cours
+        .clone()
+        .incrementer(adresse.clone());
 
-    let chemin = format!("../planche{}", req.uri().path());
+    let mut chemin_path_b = dirs::data_dir().expect(
+        "Could not deduce where to store \
+        files. Check your platform compatibility with dirs \
+        (https://crates.io/crates/dirs) crate.",
+    );
+    chemin_path_b.push(format!("planche{}", req.uri().path()));
+    let chemin = chemin_path_b
+        .to_str()
+        .expect("Path to file is not valid UTF-8 !");
+
     let (parties, body) = req.into_parts();
     let corps_str = std::str::from_utf8(&hyper::body::to_bytes(body).await?)
         .unwrap()
         .to_string();
 
-    log::info!("Requete du fichier {}", chemin.clone());
+    log::info!(
+        "Requete du fichier {}",
+        &chemin_path_b
+            .to_str()
+            .expect("Path to standard storage is not valid UTF-8 !")
+    );
 
     let mut reponse = Response::new(Body::empty());
 
     match parties.method {
         Method::GET => {
-            if chemin == *"../planche/" {
-                *reponse.body_mut() = Body::from(fs::read_to_string("../planche/index.html").unwrap());
-            } else if chemin == *"../planche/majs" {
+            if chemin == "../planche/" {
+                *reponse.body_mut() =
+                    Body::from(fs::read_to_string("../planche/index.html").unwrap());
+            } else if chemin == "../planche/majs" {
                 reponse
                     .headers_mut()
                     .insert(CONTENT_TYPE, "application/json".parse().unwrap());
