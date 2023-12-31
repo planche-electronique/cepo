@@ -44,11 +44,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     //let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
     let adresse = SocketAddr::from(([127, 0, 0, 1], configuration.clone().port as u16));
-    let mut data_dir = dirs::data_dir().unwrap();
-    data_dir.push("cepo");
     // creation du dossier de travail si besoin
-    if !(data_dir.as_path().exists()) {
-        fs::create_dir(data_dir.as_path()).expect("Could not create data_dir on your platform.");
+    if !(crate::data_dir().as_path().exists()) {
+        if !(dirs::data_dir().unwrap().as_path().exists()) {
+            dbg!(dirs::data_dir().unwrap());
+            fs::create_dir(dirs::data_dir().unwrap()).unwrap();
+        }
+        dbg!("5");
+        fs::create_dir(data_dir().as_path()).expect("Could not create data_dir on your platform.");
         log::info!("Dossier de travail créé.");
     }
 
