@@ -130,7 +130,7 @@ async fn gestion_connexion(
         &full_path_b
             .to_str()
             .expect("Path to standard storage is not valid UTF-8 !"),
-        // &parties.uri.query().unwrap_or_default()
+        &parties.uri.query().unwrap_or_default()
     );
 
     let mut reponse = Response::new(Body::empty());
