@@ -1,7 +1,7 @@
 //! Pour gérer les requêtes à OGN.
 
 use crate::vol::{MettreAJour, Vol};
-use crate::{Appareil, ActifServeur};
+use crate::{ActifServeur, Appareil};
 use chrono::prelude::*;
 use json::JsonValue;
 use log;
@@ -76,7 +76,8 @@ pub async fn vols_ogn(date: NaiveDate, airfield_oaci: String) -> Result<Vec<Vol>
         }
     };
 
-    let contenu_fichier = fs::read_to_string("../planche/infos.json").unwrap();
+    let contenu_fichier =
+        fs::read_to_string(crate::data_dir().as_path().join("infos.json")).unwrap();
     let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
     let immatriculations_json = &fichier_parse["immatriculations"];
     let iter_fichier = immatriculations_json.members();

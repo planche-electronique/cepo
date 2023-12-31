@@ -1,13 +1,11 @@
 use std::fs;
-use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use serveur::client::{Client, VariationRequete};
 use serveur::ogn::synchronisation_ogn;
 use serveur::planche::mise_a_jour::{MiseAJour, MiseAJourJson, MiseAJourObsoletes};
 use serveur::planche::{MettreAJour, Planche};
-use serveur::vol::{ChargementVols, Vol, VolJson};
-use serveur::{ActifServeur, Configuration};
+use serveur::{data_dir, ActifServeur, Configuration};
 
 use chrono::NaiveDate;
 
@@ -108,187 +106,177 @@ async fn gestion_connexion(
     actif_serveur: ActifServeur,
 ) -> Result<Response<Body>, Box<dyn std::error::Error + Send + Sync>> {
     let adresse = req.uri().path().to_string().clone();
+    let date_aujourdhui = chrono::Local::now().date_naive();
 
     actif_serveur
         .requetes_en_cours
         .clone()
         .incrementer(adresse.clone());
+    let (parties, body) = req.into_parts();
 
-    let mut chemin_path_b = dirs::data_dir().expect(
+    let mut full_path_b = dirs::data_dir().expect(
         "Could not deduce where to store \
         files. Check your platform compatibility with dirs \
         (https://crates.io/crates/dirs) crate.",
     );
-    chemin_path_b.push(format!("planche{}", req.uri().path()));
-    let chemin = chemin_path_b
-        .to_str()
-        .expect("Path to file is not valid UTF-8 !");
+    full_path_b.push(parties.uri.path());
 
-    let (parties, body) = req.into_parts();
     let corps_str = std::str::from_utf8(&hyper::body::to_bytes(body).await?)
         .unwrap()
         .to_string();
 
     log::info!(
-        "Requete du fichier {}",
-        &chemin_path_b
+        "Requete du fichier {} {}",
+        &full_path_b
             .to_str()
-            .expect("Path to standard storage is not valid UTF-8 !")
+            .expect("Path to standard storage is not valid UTF-8 !"),
+        // &parties.uri.query().unwrap_or_default()
     );
 
     let mut reponse = Response::new(Body::empty());
 
-    match parties.method {
-        Method::GET => {
-            if chemin == "../planche/" {
-                *reponse.body_mut() =
-                    Body::from(fs::read_to_string("../planche/index.html").unwrap());
-            } else if chemin == "../planche/majs" {
-                reponse
-                    .headers_mut()
-                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-                reponse.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_HEADERS,
-                    "content-type, origin".parse().unwrap(),
-                );
-                reponse
-                    .headers_mut()
-                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-                let mut majs_lock = actif_serveur.majs.lock().unwrap();
-                let majs = (*majs_lock).clone();
-                (*majs_lock).enlever_majs_obsoletes(chrono::Duration::minutes(5));
-                drop(majs_lock);
-                *reponse.body_mut() = Body::from(majs.vers_json());
-            } else if &(chemin[11..15]) == "vols" {
-                reponse
-                    .headers_mut()
-                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-                reponse.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_HEADERS,
-                    "content-type, origin".parse().unwrap(),
-                );
-                reponse
-                    .headers_mut()
-                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-                let date_str = &chemin[15..26];
-                let date = NaiveDate::parse_from_str(date_str, "/%Y/%m/%d").unwrap();
-
-                let vols: Vec<Vol> = Vec::du(date, &actif_serveur).await?;
-                *reponse.body_mut() = Body::from(vols.vers_json());
-
-            //fichier de vols "émulé"
-            } else if &(chemin[11..18]) == "planche" {
-                reponse
-                    .headers_mut()
-                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-                reponse.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_HEADERS,
-                    "content-type, origin".parse().unwrap(),
-                );
-                reponse
-                    .headers_mut()
-                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+    match (&parties.method, parties.uri.path()) {
+        (&Method::GET, "/planche") => {
+            reponse
+                .headers_mut()
+                .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+            reponse.headers_mut().insert(
+                ACCESS_CONTROL_ALLOW_HEADERS,
+                "content-type, origin".parse().unwrap(),
+            );
+            reponse
+                .headers_mut()
+                .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+            let query = parties.uri.query();
+            let date = match query {
+                Some(query_str) => NaiveDate::parse_from_str(query_str, "date=%Y/%m/%d")
+                    .unwrap_or_else(|_| date_aujourdhui),
+                None => date_aujourdhui,
+            };
+            if date == date_aujourdhui {
                 //on recupere la liste de planche
                 let planche_lock = actif_serveur.planche.lock().unwrap();
                 let clone_planche = (*planche_lock).clone();
                 drop(planche_lock);
                 *reponse.body_mut() = Body::from(clone_planche.vers_json());
-
-            //fichier de vols "émulé"
-            } else if &chemin[8..12] != "vols" {
-                if chemin[chemin.len() - 5..chemin.len()] == *".json" {
-                    reponse
-                        .headers_mut()
-                        .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-                    reponse
-                        .headers_mut()
-                        .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-                } else if chemin[chemin.len() - 3..chemin.len()] == *".js" {
-                    reponse
-                        .headers_mut()
-                        .insert(CONTENT_TYPE, "application/javascript".parse().unwrap());
-                    reponse
-                        .headers_mut()
-                        .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-                }
-                *reponse.body_mut() = Body::from(
-                    fs::read_to_string(format!("../planche/{}", chemin)).unwrap_or_else(|_| {
-                        *reponse.status_mut() = StatusCode::NOT_FOUND;
-                        fs::read_to_string("../planche/404.html").unwrap_or_else(|err| {
-                            log::info!("pas de 404.html !! : {}", err);
-                            "".to_string()
-                        })
-                    }),
-                );
+            } else {
+                *reponse.body_mut() =
+                    Body::from(Planche::du(date, &actif_serveur).await.unwrap().vers_json());
             }
         }
-
-        Method::POST => {
-            if chemin == "../planche/mise_a_jour" {
-                // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
-                let mut mise_a_jour = MiseAJour::new();
-                let mut corps_json_nettoye = String::new(); //necessite de creer une string qui va contenir
-                                                            //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
-                for char in corps_str.chars() {
-                    if char as u32 != 0 {
-                        corps_json_nettoye.push_str(char.to_string().as_str());
-                    }
-                }
-
-                mise_a_jour
-                    .parse(json::parse(&corps_json_nettoye).unwrap())
-                    .unwrap();
-                let date_aujourdhui = chrono::Local::now().date_naive();
-                {
-                    // On ajoute la mise a jour au vecteur de mises a jour
-                    let mut majs_lock = actif_serveur.majs.lock().unwrap();
-                    (*majs_lock).push(mise_a_jour.clone());
-                }
-
-                if mise_a_jour.date != date_aujourdhui {
-                    let mut planche_voulue = Planche::du(mise_a_jour.date, &actif_serveur).await?;
-                    planche_voulue.mettre_a_jour(mise_a_jour);
-                    planche_voulue.enregistrer();
-                } else {
-                    let mut planche_lock = actif_serveur.planche.lock().unwrap();
-                    (*planche_lock).mettre_a_jour(mise_a_jour);
-                    (*planche_lock).enregistrer();
-                    drop(planche_lock);
-                }
-                reponse
-                    .headers_mut()
-                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-                reponse
-                    .headers_mut()
-                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-            }
+        (&Method::GET, "/majs") => {
+            reponse
+                .headers_mut()
+                .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+            reponse.headers_mut().insert(
+                ACCESS_CONTROL_ALLOW_HEADERS,
+                "content-type, origin".parse().unwrap(),
+            );
+            reponse
+                .headers_mut()
+                .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+            let mut majs_lock = actif_serveur.majs.lock().unwrap();
+            let majs = (*majs_lock).clone();
+            (*majs_lock).enlever_majs_obsoletes(chrono::Duration::minutes(5));
+            drop(majs_lock);
+            *reponse.body_mut() = Body::from(majs.vers_json());
         }
-
-        Method::OPTIONS => {
-            if chemin == "/mise_a_jour" {
-                // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
-                *reponse.status_mut() = StatusCode::NO_CONTENT;
-                reponse
-                    .headers_mut()
-                    .insert(CONNECTION, "keep-alive".parse().unwrap());
-                reponse
-                    .headers_mut()
-                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-                reponse
-                    .headers_mut()
-                    .insert(ACCESS_CONTROL_MAX_AGE, "86400".parse().unwrap());
-                reponse.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_METHODS,
-                    "POST, OPTIONS".parse().unwrap(),
-                );
-                reponse.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_HEADERS,
-                    "origin, content-type".parse().unwrap(),
-                );
+        (&Method::GET, "/infos.json") => {
+            reponse
+                .headers_mut()
+                .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+            reponse.headers_mut().insert(
+                ACCESS_CONTROL_ALLOW_HEADERS,
+                "content-type, origin".parse().unwrap(),
+            );
+            reponse
+                .headers_mut()
+                .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+            let path = data_dir()
+                .as_path()
+                .join(std::path::Path::new("infos.json"));
+            *reponse.body_mut() = Body::from(fs::read_to_string(path).unwrap_or_else(|err| {
+                log::warn!("Could not load infos.json : {}", err);
+                *reponse.status_mut() = hyper::StatusCode::NOT_FOUND;
+                "{}".to_string()
+            }));
+        }
+        (&Method::POST, "/majs") => {
+            // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
+            let mut mise_a_jour = MiseAJour::new();
+            let mut corps_json_nettoye = String::new(); //necessite de creer une string qui va contenir
+                                                        //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
+            for char in corps_str.chars() {
+                if char as u32 != 0 {
+                    corps_json_nettoye.push_str(char.to_string().as_str());
+                }
             }
+
+            mise_a_jour
+                .parse(json::parse(&corps_json_nettoye).unwrap())
+                .unwrap();
+            let date_aujourdhui = chrono::Local::now().date_naive();
+            {
+                // On ajoute la mise a jour au vecteur de mises a jour
+                let mut majs_lock = actif_serveur.majs.lock().unwrap();
+                (*majs_lock).push(mise_a_jour.clone());
+            }
+
+            if mise_a_jour.date != date_aujourdhui {
+                let mut planche_voulue = Planche::du(mise_a_jour.date, &actif_serveur).await?;
+                planche_voulue.mettre_a_jour(mise_a_jour);
+                planche_voulue.enregistrer();
+            } else {
+                let mut planche_lock = actif_serveur.planche.lock().unwrap();
+                (*planche_lock).mettre_a_jour(mise_a_jour);
+                (*planche_lock).enregistrer();
+                drop(planche_lock);
+            }
+            reponse
+                .headers_mut()
+                .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+            reponse
+                .headers_mut()
+                .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+        }
+        (&Method::OPTIONS, "/majs") => {
+            // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
+            *reponse.status_mut() = StatusCode::NO_CONTENT;
+            reponse
+                .headers_mut()
+                .insert(CONNECTION, "keep-alive".parse().unwrap());
+            reponse
+                .headers_mut()
+                .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+            reponse
+                .headers_mut()
+                .insert(ACCESS_CONTROL_MAX_AGE, "86400".parse().unwrap());
+            reponse.headers_mut().insert(
+                ACCESS_CONTROL_ALLOW_METHODS,
+                "POST, OPTIONS".parse().unwrap(),
+            );
+            reponse.headers_mut().insert(
+                ACCESS_CONTROL_ALLOW_HEADERS,
+                "origin, content-type".parse().unwrap(),
+            );
         }
         _ => {
-            log::error!("Methode non supportée");
+            log::error!(
+                "Method or path not available : {:?}; {:?}; {:?}",
+                &parties.method,
+                &parties.uri.path(),
+                &parties.uri.query()
+            );
+            *reponse.status_mut() = hyper::StatusCode::NOT_FOUND;
+            *reponse.body_mut() = Body::from(
+                fs::read_to_string(data_dir().as_path().join("404.html")).unwrap_or_else(|err| {
+                    log::warn!(
+                        "Could not load 404.html : {} Please add it to $XDG_DATA_DIR/cepo.",
+                        err
+                    );
+                    "".to_string()
+                }),
+            );
         }
     };
 

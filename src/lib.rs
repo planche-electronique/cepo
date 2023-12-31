@@ -108,7 +108,7 @@ pub struct ActifServeur {
     pub requetes_en_cours: Arc<Mutex<Vec<Client>>>,
 }
 
-fn data_dir() -> std::path::PathBuf {
+pub fn data_dir() -> std::path::PathBuf {
     let mut data_dir = dirs::data_dir().expect(
         "Couldn't guess where to store files. Check your os compatibility \
             with dirs (https://crates.io/crates/dirs) crate.",

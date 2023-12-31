@@ -258,10 +258,12 @@ impl ChargementVols for Vec<Vol> {
 
     async fn du(
         date: NaiveDate,
-        actif_serveur: &ActifServeur,
+        _actif_serveur: &ActifServeur,
     ) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
         let mut vols = Vec::depuis_disque(date).unwrap();
-        vols.mettre_a_jour(vols_ogn(date, actif_serveur.configuration.oaci.clone()).await?);
+        // looks to be unuseful no ?
+        //there should be a force trigger but it is normally complete as it is not today's flights
+        //vols.mettre_a_jour(vols_ogn(date, actif_serveur.configuration.oaci.clone()).await?);
         vols.enregistrer(date);
         Ok(vols)
     }

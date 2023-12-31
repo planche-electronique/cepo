@@ -48,7 +48,7 @@ impl Planche {
 
         creer_chemin_jour(annee, mois, jour);
         let mut planche = Planche::depuis_disque(date).unwrap();
-        planche.mettre_a_jour_ogn(actif_serveur).await?;
+        //planche.mettre_a_jour_ogn(actif_serveur).await?;
         planche.enregistrer();
         Ok(planche)
     }
