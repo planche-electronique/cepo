@@ -9,6 +9,7 @@
 
 ARG RUST_VERSION=1.75.0
 ARG APP_NAME=serveur
+ARG USERNAME=appuser
 FROM rust:${RUST_VERSION}-slim-bullseye AS build
 ARG APP_NAME
 WORKDIR /home/appuser/.local/
@@ -50,13 +51,14 @@ FROM debian:bullseye-slim AS final
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#user
 ARG UID=10001
+ARG USERNAME=appuser
 RUN adduser \
     --disabled-password \
     --gecos "" \
     --shell "/sbin/nologin" \
     --uid "${UID}" \
-    appuser
-USER appuser
+    $USERNAME
+USER $USERNAME
 
 # Copy the executable from the "build" stage.
 COPY --from=build /bin/server /bin/
