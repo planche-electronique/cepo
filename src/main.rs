@@ -37,7 +37,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         env_logger::Env::default().default_filter_or(configuration.niveau_log.clone()),
     )
     .init();
+    #[cfg(debug_assertions)]
     setup_panic!();
+
     log::info!("Démarrage...");
 
     let date_aujourdhui = chrono::Local::now().date_naive();
