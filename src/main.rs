@@ -48,12 +48,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let adresse = SocketAddr::from(([127, 0, 0, 1], configuration.clone().port as u16));
     // creation du dossier de travail si besoin
     if !(crate::data_dir().as_path().exists()) {
-        if !(dirs::data_dir().unwrap().as_path().exists()) {
-            dbg!(dirs::data_dir().unwrap());
-            fs::create_dir(dirs::data_dir().unwrap()).unwrap();
-        }
-        dbg!("5");
-        fs::create_dir(data_dir().as_path()).expect("Could not create data_dir on your platform.");
+        fs::create_dir_all(data_dir().as_path())
+            .expect("Could not create data_dir on your platform.");
         log::info!("Dossier de travail créé.");
     }
 
