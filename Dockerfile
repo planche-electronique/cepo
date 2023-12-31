@@ -64,7 +64,9 @@ USER $USERNAME
 COPY --from=build /bin/server /bin/
 
 # RUN mkdir /home/appuser/.local
-# RUN mkdir /home/appuser/.local/cepo
+RUN mkdir -p /home/appuser/.local/cepo
+# RUN chown -R $USERNAME /home/$USERNAME
+# RUN chmod -R +w /home/$USERNAME/
 # Expose the port that the application listens on.
 EXPOSE 7878:7878
 
