@@ -47,21 +47,14 @@ pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
     let jour_str = nom_fichier_date(jour as i32);
     let mois_str = nom_fichier_date(mois as i32);
 
-    let mut path_tmp = crate::data_dir();
-    path_tmp.push(annee.to_string());
+    let mut path = crate::data_dir();
+    path.push(annee.to_string());
+    path.push(&mois_str);
+    path.push(&jour_str);
 
-    if !path_tmp.as_path().exists() {
-        fs::create_dir(&path_tmp).unwrap();
-    }
-    path_tmp.push(&mois_str);
-
-    if !path_tmp.as_path().exists() {
-        fs::create_dir(&path_tmp).unwrap();
-    }
-    path_tmp.push(&jour_str);
-
-    if !path_tmp.exists() {
-        fs::create_dir(path_tmp).unwrap();
+    if !path.as_path().exists() {
+        dbg!(&path);
+        fs::create_dir_all(&path).unwrap();
         log::info!("Création du chemin {}/{}/{}", annee, &mois_str, &jour_str);
     }
 }
