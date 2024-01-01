@@ -14,8 +14,6 @@ services:
       target: final
     ports:
       - 7878:7878
-    volumes:
-      - myapp:/home/appuser/.local
 volumes:
   myapp:
 
