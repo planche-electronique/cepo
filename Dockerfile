@@ -54,21 +54,22 @@ ARG UID=10001
 ARG USERNAME=appuser
 RUN adduser \
     --disabled-password \
-    --gecos "" \
-    --shell "/sbin/nologin" \
-    --uid "${UID}" \
+    --shell "/bin/bash" \
     $USERNAME
+
+COPY --from=build /bin/server /bin/
+COPY infos.json /home/$USERNAME/.local/share/cepo/infos.json
+
+RUN chown -R $USERNAME /home/$USERNAME
+RUN chmod -R +w /home/$USERNAME/
 USER $USERNAME
 
 # Copy the executable from the "build" stage.
-COPY --from=build /bin/server /bin/
 
 # RUN mkdir /home/appuser/.local
-RUN mkdir -p /home/appuser/.local/cepo
-# RUN chown -R $USERNAME /home/$USERNAME
-# RUN chmod -R +w /home/$USERNAME/
 # Expose the port that the application listens on.
 EXPOSE 7878:7878
 
+
 # What the container should run when it is started.
-CMD ["/bin/server"]
+CMD /bin/server
