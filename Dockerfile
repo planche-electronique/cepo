@@ -86,3 +86,4 @@ EXPOSE 7878
 
 # What the container should run when it is started.
 CMD ["/bin/server"]
+
