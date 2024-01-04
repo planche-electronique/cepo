@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let date_aujourdhui = chrono::Local::now().date_naive();
     let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     //let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
-    let adresse = SocketAddr::from(([127, 0, 0, 1], configuration.clone().port as u16));
+    let adresse = SocketAddr::from(([0, 0, 0, 0], configuration.clone().port as u16));
     // creation du dossier de travail si besoin
     if !(crate::data_dir().as_path().exists()) {
         fs::create_dir_all(data_dir().as_path())
