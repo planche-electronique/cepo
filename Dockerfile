@@ -74,7 +74,7 @@ RUN adduser \
     --shell "/bin/bash" \
     --uid "${UID}" \
     $USERNAME
-COPY infos.json /home/$USERNAME/.local/share/cepo/infos.json
+#COPY infos.json /home/$USERNAME/.local/share/cepo/infos.json
 RUN chown -R $USERNAME /home/$USERNAME
 USER $USERNAME
 
