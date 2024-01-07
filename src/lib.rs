@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 
 use brick_ogn::planche::mise_a_jour::MiseAJour;
 use brick_ogn::planche::Planche;
-use dirs;
+
 
 pub mod client;
 pub mod ogn;

@@ -23,7 +23,7 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use hyper::{Method, StatusCode};
 
-use dirs;
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -154,7 +154,7 @@ async fn gestion_connexion(
             let query = parties.uri.query();
             let date = match query {
                 Some(query_str) => NaiveDate::parse_from_str(query_str, "date=%Y/%m/%d")
-                    .unwrap_or_else(|_| date_aujourdhui),
+                    .unwrap_or(date_aujourdhui),
                 None => date_aujourdhui,
             };
             if date == date_aujourdhui {

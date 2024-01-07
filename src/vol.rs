@@ -124,7 +124,7 @@ impl ChargementVols for Vec<Vol> {
         creer_chemin_jour(annee, mois, jour);
         let mut chemin = data_dir();
         chemin.push(format!("{}/{}/{}/", annee, mois_str, jour_str));
-        let fichiers = fs::read_dir(&chemin).expect(&format!("Couldn't load {:?}", chemin.clone()));
+        let fichiers = fs::read_dir(&chemin).unwrap_or_else(|_| panic!("Couldn't load {:?}", chemin.clone()));
         let mut vols: Vec<Vol> = Vec::new();
 
         for fichier in fichiers {
@@ -146,7 +146,7 @@ impl ChargementVols for Vec<Vol> {
         date: NaiveDate,
         _actif_serveur: &ActifServeur,
     ) -> Result<Vec<Vol>, Box<dyn std::error::Error + Send + Sync>> {
-        let mut vols = Vec::depuis_disque(date).unwrap();
+        let vols = Vec::depuis_disque(date).unwrap();
         // looks to be unuseful no ?
         //there should be a force trigger but it is normally complete as it is not today's flights
         //vols.mettre_a_jour(vols_ogn(date, actif_serveur.configuration.oaci.clone()).await?);

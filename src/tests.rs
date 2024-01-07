@@ -10,8 +10,8 @@ fn test_traitement_requete_ogn() {
 
 #[test]
 fn test_vol_from_json() {
+    use brick_ogn::vol::Vol;
     use chrono::NaiveTime;
-    use serveur::vol::Vol;
 
     let json_parse = json::parse("{\"numero_ogn\":1,\"aeronef\":\"F-CEAF\",\"decollage\":\"14:14\",\"atterissage\":\"14:19\"}").unwrap();
 
