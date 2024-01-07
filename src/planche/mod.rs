@@ -14,23 +14,28 @@ use log;
 pub use mise_a_jour::MiseAJour;
 use std::fs;
 
+/// Un trait qui a pour attrait de s'occuper du stockage (chargement depuyis
+/// le disque et vers le disque du type planche mais aussi plus general).
 #[async_trait]
 pub trait Stockage {
+    /// Vols chargés depuis le disque et mis à jour depuis OGN.
     async fn du(
         date: NaiveDate,
         actif_serveur: &ActifServeur,
     ) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>>;
+    /// Mise à jour de la planche à l'aide d'une requête OGN.
     async fn mettre_a_jour_ogn(
         &mut self,
         actif_serveur: &ActifServeur,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    /// Chargement de la planche depuis le disque.
     fn depuis_disque(date: NaiveDate) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>>;
+    /// Enregistrement de la planche sur le disque
     async fn enregistrer(&self);
 }
 
 #[async_trait]
 impl Stockage for Planche {
-    /// Vols chargés depuis le disque et mis à jour depuis OGN.
     async fn du(
         date: NaiveDate,
         actif_serveur: &ActifServeur,
@@ -42,11 +47,10 @@ impl Stockage for Planche {
         creer_chemin_jour(annee, mois, jour);
         let mut planche = Planche::depuis_disque(date).unwrap();
         planche.mettre_a_jour_ogn(actif_serveur).await?;
-        planche.enregistrer();
+        let _ = planche.enregistrer();
         Ok(planche)
     }
 
-    /// Mise à jour de la planche à l'aide d'une requête OGN.
     async fn mettre_a_jour_ogn(
         &mut self,
         actif_serveur: &ActifServeur,
@@ -104,7 +108,6 @@ impl Stockage for Planche {
         Ok(())
     }
 
-    /// Chargement de la planche depuis le disque.
     fn depuis_disque(date: NaiveDate) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
         let annee = date.year();
         let mois = date.month();
@@ -159,7 +162,6 @@ impl Stockage for Planche {
             chef_piste,
         })
     }
-    /// Enregistrement de la planche sur le disque
     async fn enregistrer(&self) {
         let date = self.date;
         let annee = date.year();
