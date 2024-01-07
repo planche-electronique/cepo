@@ -140,6 +140,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "327762f6e5a765692301e5bb513e0d9fef63be86bbc14528052b1cd3e6f03e07"
 
 [[package]]
+name = "brick_ogn"
+version = "0.1.0"
+source = "git+https://github.com/planche-electronique/brick_ogn#97aac6c24dd5aefc49e4eb9a7a535a3ce1f6f151"
+dependencies = [
+ "chrono",
+ "env_logger",
+ "json",
+ "log",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1061,6 +1072,7 @@ name = "serveur"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "brick_ogn",
  "chrono",
  "confy",
  "dirs",

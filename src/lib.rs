@@ -5,11 +5,12 @@
 //! La planche fonctionnera alors.
 
 use crate::client::Client;
-use crate::planche::{MiseAJour, Planche};
 use std::fs;
 
 use std::sync::{Arc, Mutex};
 
+use brick_ogn::planche::Planche;
+use brick_ogn::MiseAJour;
 use dirs;
 
 pub mod client;

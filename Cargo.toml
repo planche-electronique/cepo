@@ -15,6 +15,7 @@ human-panic = "1.1.5"
 hyper = { version = "0.14", features = ["full"] }
 json = "0.12.4"
 log = "0.4.19"
+brick_ogn = { git = "https://github.com/planche-electronique/brick_ogn", version = "0.1.0" }
 reqwest = { version = "0.11.16", features = ["blocking", "json"] }
 serde = "1.0.180"
 tokio = { version = "1", features = ["full"] }
