@@ -12,7 +12,6 @@ use std::sync::{Arc, Mutex};
 use brick_ogn::planche::mise_a_jour::MiseAJour;
 use brick_ogn::planche::Planche;
 
-
 pub mod client;
 pub mod ogn;
 pub mod planche;
@@ -102,6 +101,8 @@ pub struct ActifServeur {
     pub requetes_en_cours: Arc<Mutex<Vec<Client>>>,
 }
 
+/// A function that provides the basic path for storage using dirs crate to
+/// provide platform specific paths.
 pub fn data_dir() -> std::path::PathBuf {
     let mut data_dir = dirs::data_dir().expect(
         "Couldn't guess where to store files. Check your os compatibility \
