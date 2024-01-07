@@ -9,8 +9,8 @@ use std::fs;
 
 use std::sync::{Arc, Mutex};
 
+use brick_ogn::planche::mise_a_jour::MiseAJour;
 use brick_ogn::planche::Planche;
-use brick_ogn::MiseAJour;
 use dirs;
 
 pub mod client;

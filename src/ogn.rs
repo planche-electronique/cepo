@@ -1,6 +1,7 @@
 //! Pour gérer les requêtes à OGN.
 
-use crate::vol::{MettreAJour, Vol};
+use crate::planche::Stockage;
+use crate::vol::Vol;
 use crate::{ActifServeur, Appareil};
 use chrono::prelude::*;
 use json::JsonValue;
