@@ -1,10 +1,13 @@
 use std::fs;
 use std::sync::{Arc, Mutex};
 
+use brick_ogn::planche::mise_a_jour::MiseAJourJson;
+use brick_ogn::planche::mise_a_jour::MiseAJourObsoletes;
+use brick_ogn::planche::MiseAJour;
+use brick_ogn::planche::{MettreAJour, Planche};
 use serveur::client::{Client, VariationRequete};
 use serveur::ogn::synchronisation_ogn;
-use serveur::planche::mise_a_jour::{MiseAJour, MiseAJourJson, MiseAJourObsoletes};
-use serveur::planche::{MettreAJour, Planche};
+use serveur::planche::Stockage;
 use serveur::{data_dir, ActifServeur, Configuration};
 
 use chrono::NaiveDate;

@@ -1,8 +1,8 @@
 //! Tout ce qui attrait aux vols que nous enregistrons.
 
-use crate::ogn::vols_ogn;
 use crate::{creer_chemin_jour, data_dir, nom_fichier_date, ActifServeur};
 use async_trait::async_trait;
+use brick_ogn::vol::Vol;
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use json::JsonValue;
 use std::fs;

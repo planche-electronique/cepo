@@ -1,8 +1,9 @@
 //! Pour gérer les requêtes à OGN.
 
 use crate::planche::Stockage;
-use crate::vol::Vol;
+use crate::vol::MettreAJour;
 use crate::{ActifServeur, Appareil};
+use brick_ogn::vol::Vol;
 use chrono::prelude::*;
 use json::JsonValue;
 use log;

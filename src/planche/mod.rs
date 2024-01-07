@@ -3,6 +3,7 @@
 pub mod mise_a_jour;
 
 use crate::ogn::vols_ogn;
+use crate::vol::ChargementVols;
 use crate::{creer_chemin_jour, nom_fichier_date, ActifServeur};
 use async_trait::async_trait;
 use brick_ogn::planche::Planche;
@@ -23,9 +24,7 @@ pub trait Stockage {
         &mut self,
         actif_serveur: &ActifServeur,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    async fn depuis_disque(
-        date: NaiveDate,
-    ) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>>;
+    fn depuis_disque(date: NaiveDate) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>>;
     async fn enregistrer(&self);
 }
 
@@ -106,9 +105,7 @@ impl Stockage for Planche {
     }
 
     /// Chargement de la planche depuis le disque.
-    async fn depuis_disque(
-        date: NaiveDate,
-    ) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
+    fn depuis_disque(date: NaiveDate) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>> {
         let annee = date.year();
         let mois = date.month();
         let jour = date.day();
