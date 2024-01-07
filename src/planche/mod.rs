@@ -31,7 +31,7 @@ pub trait Stockage {
     /// Chargement de la planche depuis le disque.
     fn depuis_disque(date: NaiveDate) -> Result<Planche, Box<dyn std::error::Error + Send + Sync>>;
     /// Enregistrement de la planche sur le disque
-    async fn enregistrer(&self);
+    fn enregistrer(&self);
 }
 
 #[async_trait]
@@ -162,7 +162,7 @@ impl Stockage for Planche {
             chef_piste,
         })
     }
-    async fn enregistrer(&self) {
+    fn enregistrer(&self) {
         let date = self.date;
         let annee = date.year();
         let mois = date.month();
