@@ -111,7 +111,7 @@ impl Storage for FlightLog {
         let mois = date.month();
         let jour = date.day();
         log::info!(
-            "Chargement depuis le disque de la planche du {}/{}/{}",
+            "Loading FlightLog from the disk {}/{}/{}",
             annee,
             mois,
             jour
