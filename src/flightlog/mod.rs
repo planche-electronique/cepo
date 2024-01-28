@@ -1,18 +1,13 @@
 //! Module des planche, i.e. un ensemble de plusieurs [`Vol`] et d'affectation.
 
 use crate::ogn::ogn_flights;
-use crate::flight::FlightSaving;
 use crate::{create_fs_path_day, nb_2digits_string, Context};
 use async_trait::async_trait;
 use brick_ogn::flightlog::FlightLog;
-use brick_ogn::flight::Flight;
 use chrono::{Datelike, NaiveDate, NaiveTime};
-use json;
 use log;
 pub use brick_ogn::flightlog::update::Update;
 use std::fs;
-use std::path::Path;
-
 /// Un trait qui a pour attrait de s'occuper du stockage (chargement depuyis
 /// le disque et vers le disque du type planche mais aussi plus general).
 #[async_trait]
