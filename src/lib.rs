@@ -1,8 +1,8 @@
 #![warn(missing_docs)]
 
-//! Utilisation facile et rapide des donnéess d'OGN pour enregistrer décollages et atterissages de vols en planeur.
-//! Il vous suffit de fournir les données sous forme de tableau des pilotes, planeurs, remorqueurs et treuilleurs de votre club.
-//! La planche fonctionnera alors.
+//! Easy and fast usage of OGN data to load and save takeoffs and landing of glider flights.
+//! The program reads under `$XDG_DAT_DIR/cepo/infos.json` to get a list of pilots, 
+//! names, immatriculations to look at, takeoff_machines and pilots etc.
 
 use crate::client::Client;
 use std::fs;
@@ -17,24 +17,25 @@ pub mod ogn;
 pub mod flightlog;
 pub mod flight;
 
-/// Représentation d'un aéronef.
-pub struct Appareil {
-    /// Le modèle/type de l'aéronef.
+/// Aircraft struct, used to parse OGN API.
+pub struct Aircraft {
+    /// The type of the aircraft, coming from OGN.
     pub modele: String,
-    /// La catégorie de cet aéronef (avion, planeur...).
+    /// Aircraft category (airplane, glider...) using OGN codes from 
+    /// [there](https://gitlab.com/davischappins/ogn-flightbook/-/blob/master/doc/API.md.)
     pub categorie: u8,
-    /// L'immatriculation de cet aéronef(F-CMOI...).
+    /// The string of the immatriculation e(ex: `F-CMOI`).
     pub immatriculation: String,
 }
 
 /// Ajoute un 0 devant le nombre s'il est inférieur à 10 pour avoir des strings à 2 chiffres et à longueur fixe.
 /// # Exemple
 /// ```
-/// use serveur::nom_fichier_date;
+/// use serveur::nb_2digits_string;
 /// assert_eq!(nom_fichier_date(2), String::from("02"));
 /// assert_eq!(nom_fichier_date(20), String::from("20"));
 /// ```
-pub fn nom_fichier_date(nombre: i32) -> String {
+pub fn nb_2digits_string(nombre: i32) -> String {
     if nombre > 9 {
         nombre.to_string()
     } else {
@@ -42,10 +43,10 @@ pub fn nom_fichier_date(nombre: i32) -> String {
     }
 }
 
-/// Permet de créer le chemin du jour à "$XDG_DATA_DIR/cepo/annee/mois/jour".
-pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
-    let jour_str = nom_fichier_date(jour as i32);
-    let mois_str = nom_fichier_date(mois as i32);
+/// Create the path associated with a day of the time at "$XDG_DATA_DIR/cepo/year/month/day".
+pub fn create_fs_path_day(annee: i32, mois: u32, jour: u32) {
+    let jour_str = nb_2digits_string(jour as i32);
+    let mois_str = nb_2digits_string(mois as i32);
 
     let mut path = crate::data_dir();
     path.push(annee.to_string());
@@ -59,18 +60,18 @@ pub fn creer_chemin_jour(annee: i32, mois: u32, jour: u32) {
     }
 }
 
-/// Permet de stocker et partager la configuration du serveur. Elle est chargée grâce à
-/// [confy](https://crates.io/crates/confy). Elle a une valeur par défaut qui est écrite si le
-/// fichier de confiuration est inexistant.
+/// Allows to store and share configuration of the server. Loaded thanks to
+/// [confy](https://crates.io/crates/confy). Default value is written if there 
+/// is no config file.
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Configuration {
-    /// Le code OACI de l'aéroport dont les vols vont être loggés.
+    /// OACI string of the airport to look at.
     pub oaci: String,
-    /// Le temps d'attente entre chaque requête au serveur OGN.
+    /// Time between each OGN poll.
     pub f_synchronisation_secs: i32,
-    /// Le port sur lequel le serveur va écouter les requêtes (7878 par défaut).
+    /// The port on which the server will listen to requests (default to 7878).
     pub port: i32,
-    /// Le niveau de log à afficher dans le terminal ("info" par défaut). A choisir parmis "trace",
+    /// Le log level to show. Default is "info".  To choose between trace",
     /// "debug", "info", "warn", "error".
     pub niveau_log: String,
 }
@@ -86,18 +87,20 @@ impl Default for Configuration {
     }
 }
 
-/// Suprerstructure du serveur. Elle permet de stocker la configuration et les structures de
-/// données telles que la planche du jour, les requêtes en cours et les requêtes des 5 dernières minutes.
+/// Server context. Stores configuration, current requests, updates made in the 
+/// after the last OGN request and the FlightLog of the day.
 #[derive(Clone)]
 pub struct Context {
-    /// La configuration du serveur.
+    /// Server config.
     pub configuration: Configuration,
-    /// La planche du jour, en mémoire et partageable entre threads.
+    /// The day flightlog.
     pub flightlog: Arc<Mutex<FlightLog>>,
-    /// Un vecteur de mise_a_jour pour alléger les requêtes des planches. Les mises à jour ne sont
-    /// gardées que 5 minutes.
+    /// An vector of Update to keep in memory the updates that were recently made
+    /// (after the last OGN automatic request) to avoid to reload the entire 
+    /// flightlog.
     pub updates: Arc<Mutex<Vec<Update>>>,
-    /// Un vecteur qui permet de comptabiliser le nombre de requêtes en cours pour éviter les ddos.
+    /// A vector that stores who is actually requesting, to limit the number of 
+    /// concurrent request of the same user. (Some sort of ddos protection).
     pub current_requests: Arc<Mutex<Vec<Client>>>,
 }
 

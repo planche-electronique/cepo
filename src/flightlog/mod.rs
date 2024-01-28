@@ -2,7 +2,7 @@
 
 use crate::ogn::ogn_flights;
 use crate::flight::FlightSaving;
-use crate::{creer_chemin_jour, nom_fichier_date, Context};
+use crate::{create_fs_path_day, nb_2digits_string, Context};
 use async_trait::async_trait;
 use brick_ogn::flightlog::FlightLog;
 use brick_ogn::flight::Flight;
@@ -42,7 +42,7 @@ impl Storage for FlightLog {
         let month = date.month();
         let day = date.day();
 
-        creer_chemin_jour(year, month, day);
+        create_fs_path_day(year, month, day);
         let mut planche = FlightLog::load(date).unwrap();
         planche.update_ogn(actif_serveur).await?;
         let _ = planche.save();
@@ -117,8 +117,8 @@ impl Storage for FlightLog {
             jour
         );
 
-        let mois_str = nom_fichier_date(mois as i32);
-        let jour_str = nom_fichier_date(jour as i32);
+        let mois_str = nb_2digits_string(mois as i32);
+        let jour_str = nb_2digits_string(jour as i32);
 
         let flights: Vec<Flight> = Vec::load(date).unwrap();
         let mut affectations_path = crate::data_dir();
@@ -129,11 +129,11 @@ impl Storage for FlightLog {
         let affectations_str = fs::read_to_string(affectations_path).unwrap_or_default();
         let affectations_json =
             json::parse(&affectations_str).unwrap_or_else(|_| json::JsonValue::Null);
-        let winch_pilot = affectations_json["pilote_tr"]
+        let winch_pilot = affectations_json["winch_pilot"]
             .as_str()
             .unwrap_or_default()
             .to_string();
-        let winch = affectations_json["treuil"]
+        let winch = affectations_json["winch>"]
             .as_str()
             .unwrap_or_default()
             .to_string();
@@ -166,8 +166,8 @@ impl Storage for FlightLog {
         let mois = date.month();
         let jour = date.day();
 
-        let jour_str = nom_fichier_date(jour as i32);
-        let mois_str = nom_fichier_date(mois as i32);
+        let jour_str = nb_2digits_string(jour as i32);
+        let mois_str = nb_2digits_string(mois as i32);
 
         self.flights.save(date);
 

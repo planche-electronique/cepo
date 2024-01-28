@@ -142,7 +142,7 @@ checksum = "ed570934406eb16438a4e976b1b4500774099c13b8cb96eec99f620f05090ddf"
 [[package]]
 name = "brick_ogn"
 version = "0.1.0"
-source = "git+https://github.com/planche-electronique/brick_ogn#5674295738e80c86c811f92d2e8f5ab257046367"
+source = "git+https://github.com/planche-electronique/brick_ogn#276f3dc07d0459ba450d7347b9fccb81b2115788"
 dependencies = [
  "chrono",
  "env_logger",
@@ -566,9 +566,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.1.0"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d530e1a18b1cb4c484e6e34556a0d948706958449fca0cab753d649f2bce3d1f"
+checksum = "cf2a4f498956c7723dc280afc6a37d0dec50b39a29e232c6187ce4503703e8c2"
 dependencies = [
  "equivalent",
  "hashbrown",

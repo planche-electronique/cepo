@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let context = ctx_clone.clone();
         async move {
             Ok::<_, Infallible>(service_fn(move |req| {
-                gestion_connexion(req, context.clone())
+                connection_handler(req, context.clone())
             }))
         }
     });
@@ -99,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     Ok(())
 }
 
-async fn gestion_connexion(
+async fn connection_handler(
     req: Request<Body>,
     context: Context,
 ) -> Result<Response<Body>, Box<dyn std::error::Error + Send + Sync>> {
@@ -173,10 +173,10 @@ async fn gestion_connexion(
             response
                 .headers_mut()
                 .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-            let mut majs_lock = context.updates.lock().unwrap();
-            let majs = (*majs_lock).clone();
-            (*majs_lock).remove_obsolete_updates(chrono::Duration::minutes(5));
-            drop(majs_lock);
+            let mut updates_lock = context.updates.lock().unwrap();
+            let majs = (*updates_lock).clone();
+            (*updates_lock).remove_obsolete_updates(chrono::Duration::minutes(5));
+            drop(updates_lock);
             *response.body_mut() = Body::from(serde_json::to_string(&majs).unwrap_or_default());
         }
         (&Method::GET, "/infos.json") => {
@@ -201,26 +201,25 @@ async fn gestion_connexion(
         }
         (&Method::POST, "/majs") => {
             // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
-            let mut corps_json_nettoye = String::new(); //necessite de creer une string qui va contenir
+            let mut clean_json = String::new(); //necessite de creer une string qui va contenir
                                                         //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
             for char in corps_str.chars() {
                 if char as u32 != 0 {
-                    corps_json_nettoye.push_str(char.to_string().as_str());
+                    clean_json.push_str(char.to_string().as_str());
                 }
             }
 
-            let update: Update = serde_json::from_str(&corps_json_nettoye).unwrap_or_default();
-            let date_aujourdhui = chrono::Local::now().date_naive();
+            let update: Update = serde_json::from_str(&clean_json).unwrap_or_default();
             {
                 // On ajoute la mise a jour au vecteur de mises a jour
                 let mut updates_lock = context.updates.lock().unwrap();
                 (*updates_lock).push(update.clone());
             }
 
-            if update.date != date_aujourdhui {
-                let mut planche_voulue = FlightLog::from_day(update.date, &context).await?;
-                planche_voulue.update(update);
-                planche_voulue.save();
+            if update.date != today {
+                let mut wanted_flightlog = FlightLog::from_day(update.date, &context).await?;
+                wanted_flightlog.update(update);
+                wanted_flightlog.save();
             } else {
                 let mut flightlog_lock = context.flightlog.lock().unwrap();
                 (*flightlog_lock).update(update);

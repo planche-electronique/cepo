@@ -2,7 +2,7 @@
 
 use crate::flightlog::Storage;
 use crate::flight::Update;
-use crate::{Context, Appareil};
+use crate::{Context, Aircraft};
 use brick_ogn::flight::Flight;
 use chrono::prelude::*;
 use json::JsonValue;
@@ -35,7 +35,7 @@ pub async fn ogn_flights(date: NaiveDate, airfield_oaci: String) -> Result<Vec<F
     nous devons donc faire un lien entre l'immatriculation et le numero
     d'un aeronef */
     let devices = requete_parse["devices"].clone();
-    let mut appareils_ogn: Vec<Appareil> = Vec::new();
+    let mut appareils_ogn: Vec<Aircraft> = Vec::new();
     let tableau_devices = match devices {
         JsonValue::Array(appareils_json) => appareils_json,
         _ => {
@@ -57,7 +57,7 @@ pub async fn ogn_flights(date: NaiveDate, airfield_oaci: String) -> Result<Vec<F
             .unwrap_or_default()
             .to_string();
 
-        let appareil_actuel = Appareil {
+        let appareil_actuel = Aircraft {
             modele,
             categorie,
             immatriculation,
@@ -146,21 +146,21 @@ pub async fn ogn_flights(date: NaiveDate, airfield_oaci: String) -> Result<Vec<F
     Ok(vols)
 }
 
-/// Synchronise le serveur notamment en faisant une requête à OGN et en mettant à jour la planche du jour.
+/// Synchronizes the server requesting OGN latest data.
 pub async fn synchronisation_ogn(
     context: &Context,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let date = chrono::Local::now().date_naive();
-    let vols_ogn = ogn_flights(date, context.configuration.oaci.clone()).await?;
-    let planche_lock =  context.flightlog.lock().unwrap();
-    let mut ancienne_planche = (*planche_lock).clone();
-    drop(planche_lock);
-    //on teste les égalités et on remplace si besoin
-    ancienne_planche.flights.update(vols_ogn);
+    let flights_ogn = ogn_flights(date, context.configuration.oaci.clone()).await?;
+    let flightlog_lock =  context.flightlog.lock().unwrap();
+    let mut old_flightlog = (*flightlog_lock).clone();
+    drop(flightlog_lock);
+    // testing equality and replacing if needed
+    old_flightlog.flights.update(flights_ogn);
 
-    let mut planche_lock = context.flightlog.lock().unwrap();
-    *planche_lock = ancienne_planche.clone();
-    drop(planche_lock);
-    ancienne_planche.save();
+    let mut flightlog_lock = context.flightlog.lock().unwrap();
+    *flightlog_lock = old_flightlog.clone();
+    drop(flightlog_lock);
+    old_flightlog.save();
     Ok(())
 }
