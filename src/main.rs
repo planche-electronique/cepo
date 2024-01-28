@@ -15,12 +15,13 @@ use human_panic::setup_panic;
 
 //hyper utils
 use std::convert::Infallible;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 
 use hyper::header::*;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use hyper::{Method, StatusCode};
+use hyper::server::conn::AddrStream;
 
 
 
@@ -55,7 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         log::info!("Create dir for data.");
     }
 
-    let flightlog = FlightLog::load(date_today).await.unwrap();
+    let flightlog = FlightLog::load(date_today).await.unwrap_or_default();
     let flightlog_arc: Arc<Mutex<FlightLog>> = Arc::new(Mutex::new(flightlog));
 
     let updates_arc: Arc<Mutex<Vec<Update>>> = Arc::new(Mutex::new(Vec::new()));
@@ -65,27 +66,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         updates: updates_arc,
         current_requests,
     };
-
-    let ctx_clone = context.clone();
-    let service = make_service_fn(|_conn| {
-        let context = ctx_clone.clone();
+    let context_svc = context.clone();
+    let service = make_service_fn(|conn: &AddrStream| {
+        let context_clone = context_svc.clone();
+        let remote_addr = conn.remote_addr().ip().clone();
         async move {
+            let context_clone = context_clone.clone();
+            let remote_addr = remote_addr.clone();
             Ok::<_, Infallible>(service_fn(move |req| {
-                connection_handler(req, context.clone())
-            }))
+            connection_handler(req, context_clone.clone(), remote_addr)
+        }))
         }
     });
+    let f_synchronisation_secs_clone = context
+        .clone()
+        .configuration
+        .clone()
+        .f_synchronisation_secs.clone() as u64;
     //on spawn le thread qui va s'occuper de ogn
     tokio::spawn(async move {
         log::info!("Launching the OGN thread.");
         loop {
             synchronisation_ogn(&context).await.unwrap();
             tokio::time::sleep(tokio::time::Duration::from_secs(
-                context
-                    .clone()
-                    .configuration
-                    .clone()
-                    .f_synchronisation_secs as u64,
+                f_synchronisation_secs_clone
             ))
             .await; //5 minutes
         }
@@ -102,14 +106,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 async fn connection_handler(
     req: Request<Body>,
     context: Context,
+    remote_addr: IpAddr
 ) -> Result<Response<Body>, Box<dyn std::error::Error + Send + Sync>> {
-    let adress = req.uri().path().to_string().clone();
     let today = chrono::Local::now().date_naive();
 
     context
         .current_requests
         .clone()
-        .incrementer(adress.clone());
+        .incrementer(&remote_addr);
     let (parts, body) = req.into_parts();
 
     let mut full_path_b = dirs::data_dir().expect(
@@ -273,6 +277,11 @@ async fn connection_handler(
             );
         }
     };
+
+    context
+        .current_requests
+        .clone()
+        .decrementer(&remote_addr);
 
     // context.requetes_en_cours.clone().decrementer(adresse);
     Ok(response)
