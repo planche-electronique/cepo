@@ -118,7 +118,7 @@ impl Storage for FlightLog {
 
         let mut path = crate::data_dir();
         path.push(format!(
-            "{}/{}/{}/affectations.json",
+            "{}/{}/{}.json",
             year, month_str, day_str
         ));
 
@@ -139,7 +139,7 @@ impl Storage for FlightLog {
 
         let mut file_path = crate::data_dir();
         file_path.push(format!(
-            "{}/{}/{}/affectations.json",
+            "{}/{}/{}.json",
             year, month_str, day_str
         ));
 
