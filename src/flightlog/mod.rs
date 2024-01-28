@@ -121,46 +121,18 @@ impl Storage for FlightLog {
         let mois_str = nb_2digits_string(mois as i32);
         let jour_str = nb_2digits_string(jour as i32);
 
-        let flights: Vec<Flight> = Vec::load(date).unwrap();
-        let mut affectations_path = crate::data_dir();
-        affectations_path.push(format!(
+        let mut path = crate::data_dir();
+        path.push(format!(
             "{}/{}/{}/affectations.json",
             annee, mois_str, jour_str
         ));
-        let affectations_str = fs::read_to_string(affectations_path).unwrap_or_default();
-        let affectations_json =
-            json::parse(&affectations_str).unwrap_or_else(|_| json::JsonValue::Null);
-        let winch_pilot = affectations_json["winch_pilot"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string();
-        let winch = affectations_json["winch>"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string();
-        let tow_pilot = affectations_json["pilote_rq"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string();
-        let tow_plane = affectations_json["remorqueur"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string();
-        let field_chief = affectations_json["chef_piste"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string();
 
-        Ok(FlightLog {
-            date,
-            flights,
-            winch_pilot,
-            winch,
-            tow_pilot,
-            tow_plane,
-            field_chief,
-        })
+        let flightlog_str = fs::read_to_string(path).unwrap_or_default();
+        let flightlog = serde_json::from_str(&flightlog_str)?;
+
+        Ok(flightlog)
     }
+
     fn save(&self) {
         let date = self.date;
         let annee = date.year();
