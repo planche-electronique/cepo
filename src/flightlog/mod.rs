@@ -11,6 +11,7 @@ use json;
 use log;
 pub use brick_ogn::flightlog::update::Update;
 use std::fs;
+use std::path::Path;
 
 /// Un trait qui a pour attrait de s'occuper du stockage (chargement depuyis
 /// le disque et vers le disque du type planche mais aussi plus general).
@@ -169,28 +170,14 @@ impl Storage for FlightLog {
         let jour_str = nb_2digits_string(jour as i32);
         let mois_str = nb_2digits_string(mois as i32);
 
-        self.flights.save(date);
-
-        let mut affectations_path = crate::data_dir();
-        affectations_path.push(format!(
+        let mut file_path = crate::data_dir();
+        file_path.push(format!(
             "{}/{}/{}/affectations.json",
             annee, mois_str, jour_str
         ));
-        let affectations_fichier = fs::read_to_string(&affectations_path).unwrap_or_default();
-        let affectations = json::object! {
-            "pilote_tr": self.winch_pilot.clone(),
-            "treuil": self.winch.clone(),
-            "pilote_rq": self.tow_pilot.clone(),
-            "remorqueur": self.tow_plane.clone(),
-            "chef_piste": self.field_chief.clone(),
-        };
-        if json::stringify(affectations.clone()) != affectations_fichier {
-            fs::write(&affectations_path, json::stringify(affectations.clone())).unwrap_or_else(
-                |err| {
-                    log::error!("Impossible d'écrire les affectations : {}", err);
-                },
-            )
-        }
+
+        fs::write(&file_path, serde_json::to_string(self).unwrap_or_default()).unwrap();
+
         log::info!("Affectations du {annee}/{mois_str}/{jour_str} enregistrees.");
     }
 }
