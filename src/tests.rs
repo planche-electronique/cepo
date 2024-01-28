@@ -10,24 +10,24 @@ fn test_traitement_requete_ogn() {
 
 #[test]
 fn test_vol_from_json() {
-    use brick_ogn::vol::Vol;
+    use brick_ogn::flight::Flight;
     use chrono::NaiveTime;
 
-    let json_parse = json::parse("{\"numero_ogn\":1,\"aeronef\":\"F-CEAF\",\"decollage\":\"14:14\",\"atterissage\":\"14:19\"}").unwrap();
+    let json_parse = "{\"numero_ogn\":1,\"aeronef\":\"F-CEAF\",\"decollage\":\"14:14\",\"atterissage\":\"14:19\"}".to_string();
 
-    let vol_du_json = Vol::depuis_json(json_parse);
+    let vol_du_json = serde_json::from_str(&json_parse).unwrap_or_default();
 
-    let vrai_vol = Vol {
-        numero_ogn: 1,
-        code_decollage: String::from(""),
-        machine_decollage: String::from(""),
-        decolleur: String::from(""),
-        aeronef: String::from("F-CEAF"),
-        code_vol: String::from(""),
-        pilote1: String::from(""),
-        pilote2: String::from(""),
-        decollage: NaiveTime::from_hms_opt(14, 14, 0).unwrap(),
-        atterissage: NaiveTime::from_hms_opt(14, 19, 0).unwrap(),
+    let vrai_vol = Flight {
+        ogn_nb: 1,
+        takeoff_code: String::from(""),
+        takeoff_machine: String::from(""),
+        takeoff_machine_pilot: String::from(""),
+        glider: String::from("F-CEAF"),
+        flight_code: String::from(""),
+        pilot1: String::from(""),
+        pilot2: String::from(""),
+        takeoff: NaiveTime::from_hms_opt(14, 14, 0).unwrap(),
+        landing: NaiveTime::from_hms_opt(14, 19, 0).unwrap(),
     };
     assert_eq!(vrai_vol, vol_du_json)
 }

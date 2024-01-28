@@ -1,16 +1,16 @@
 //! Pour gérer les requêtes à OGN.
 
-use crate::planche::Stockage;
-use crate::vol::MettreAJour;
-use crate::{ActifServeur, Appareil};
-use brick_ogn::vol::Vol;
+use crate::flightlog::Storage;
+use crate::flight::Update;
+use crate::{Context, Appareil};
+use brick_ogn::flight::Flight;
 use chrono::prelude::*;
 use json::JsonValue;
 use log;
 use std::fs;
 
 /// Retourne les vols récupérés par requête GET à OGN.
-pub async fn vols_ogn(date: NaiveDate, airfield_oaci: String) -> Result<Vec<Vol>, hyper::Error> {
+pub async fn ogn_flights(date: NaiveDate, airfield_oaci: String) -> Result<Vec<Flight>, hyper::Error> {
     log::info!(
         "Requete à http://flightbook.glidernet.org/api/logbook/{}/{}",
         airfield_oaci,
@@ -68,7 +68,7 @@ pub async fn vols_ogn(date: NaiveDate, airfield_oaci: String) -> Result<Vec<Vol>
     /* ic on s'occupe de lister les vols et d'attribuer les
     immatriculations etc a chaque vol */
 
-    let mut vols: Vec<Vol> = Vec::new();
+    let mut vols: Vec<Flight> = Vec::new();
     let flights = requete_parse["flights"].clone();
     let vols_json = match flights {
         JsonValue::Array(vols_json) => vols_json,
@@ -107,40 +107,40 @@ pub async fn vols_ogn(date: NaiveDate, airfield_oaci: String) -> Result<Vec<Vol>
             .take_string()
             .unwrap_or_else(|| "00h00".to_string())
             .clone();
-        let decollage = NaiveTime::parse_from_str(&start_str, "%Hh%M").unwrap();
+        let takeoff = NaiveTime::parse_from_str(&start_str, "%Hh%M").unwrap();
         //atterissage
         let stop_json = vol_json["stop"].clone();
         let stop_str = match stop_json {
             json::JsonValue::Short(short) => short.as_str().to_string(),
             _ => "00h00".to_string(),
         };
-        let atterissage = NaiveTime::parse_from_str(stop_str.as_str(), "%Hh%M").unwrap();
+        let landing = NaiveTime::parse_from_str(stop_str.as_str(), "%Hh%M").unwrap();
         //code_decollage
-        let mut machine_decollage = "".to_string();
-        let code_decollage = if vol_json["tow"] == JsonValue::Null {
+        let mut takeoff_machine = "".to_string();
+        let takeoff_code = if vol_json["tow"] == JsonValue::Null {
             "T"
         } else {
             let vol_remorqueur =
                 vols_json[vol_json["tow"].clone().as_u8().unwrap() as usize].clone();
             let numero_immat_remorqueur = vol_remorqueur["device"].as_u8().unwrap() as usize;
-            machine_decollage = appareils_ogn[numero_immat_remorqueur]
+            takeoff_machine = appareils_ogn[numero_immat_remorqueur]
                 .immatriculation
                 .clone();
             "R"
         }
         .to_string();
 
-        vols.push(Vol {
-            numero_ogn: index as i32,
-            code_decollage,
-            machine_decollage,
-            decolleur: "".to_string(),
-            aeronef: immatriculation,
-            code_vol: "".to_string(),
-            pilote1: "".to_string(),
-            pilote2: "".to_string(),
-            decollage,
-            atterissage,
+        vols.push(Flight {
+            ogn_nb: index as i32,
+            takeoff_code,
+            takeoff_machine,
+            takeoff_machine_pilot: "".to_string(),
+            glider: immatriculation,
+            flight_code: "".to_string(),
+            pilot1: "".to_string(),
+            pilot2: "".to_string(),
+            takeoff,
+            landing,
         });
     }
     Ok(vols)
@@ -148,19 +148,19 @@ pub async fn vols_ogn(date: NaiveDate, airfield_oaci: String) -> Result<Vec<Vol>
 
 /// Synchronise le serveur notamment en faisant une requête à OGN et en mettant à jour la planche du jour.
 pub async fn synchronisation_ogn(
-    actif_serveur: &ActifServeur,
+    context: &Context,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let date = chrono::Local::now().date_naive();
-    let vols_ogn = vols_ogn(date, actif_serveur.configuration.oaci.clone()).await?;
-    let planche_lock = actif_serveur.planche.lock().unwrap();
+    let vols_ogn = ogn_flights(date, context.configuration.oaci.clone()).await?;
+    let planche_lock =  context.flightlog.lock().unwrap();
     let mut ancienne_planche = (*planche_lock).clone();
     drop(planche_lock);
     //on teste les égalités et on remplace si besoin
-    ancienne_planche.vols.mettre_a_jour(vols_ogn);
+    ancienne_planche.flights.update(vols_ogn);
 
-    let mut planche_lock = actif_serveur.planche.lock().unwrap();
+    let mut planche_lock = context.flightlog.lock().unwrap();
     *planche_lock = ancienne_planche.clone();
     drop(planche_lock);
-    ancienne_planche.enregistrer();
+    ancienne_planche.save();
     Ok(())
 }

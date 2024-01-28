@@ -9,13 +9,13 @@ use std::fs;
 
 use std::sync::{Arc, Mutex};
 
-use brick_ogn::planche::mise_a_jour::MiseAJour;
-use brick_ogn::planche::Planche;
+use brick_ogn::flightlog::update::Update;
+use brick_ogn::flightlog::FlightLog;
 
 pub mod client;
 pub mod ogn;
-pub mod planche;
-pub mod vol;
+pub mod flightlog;
+pub mod flight;
 
 /// Représentation d'un aéronef.
 pub struct Appareil {
@@ -89,16 +89,16 @@ impl Default for Configuration {
 /// Suprerstructure du serveur. Elle permet de stocker la configuration et les structures de
 /// données telles que la planche du jour, les requêtes en cours et les requêtes des 5 dernières minutes.
 #[derive(Clone)]
-pub struct ActifServeur {
+pub struct Context {
     /// La configuration du serveur.
     pub configuration: Configuration,
     /// La planche du jour, en mémoire et partageable entre threads.
-    pub planche: Arc<Mutex<Planche>>,
+    pub flightlog: Arc<Mutex<FlightLog>>,
     /// Un vecteur de mise_a_jour pour alléger les requêtes des planches. Les mises à jour ne sont
     /// gardées que 5 minutes.
-    pub majs: Arc<Mutex<Vec<MiseAJour>>>,
+    pub updates: Arc<Mutex<Vec<Update>>>,
     /// Un vecteur qui permet de comptabiliser le nombre de requêtes en cours pour éviter les ddos.
-    pub requetes_en_cours: Arc<Mutex<Vec<Client>>>,
+    pub current_requests: Arc<Mutex<Vec<Client>>>,
 }
 
 /// A function that provides the basic path for storage using dirs crate to

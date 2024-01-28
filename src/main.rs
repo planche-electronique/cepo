@@ -1,14 +1,13 @@
 use std::fs;
 use std::sync::{Arc, Mutex};
 
-use brick_ogn::planche::mise_a_jour::MiseAJourJson;
-use brick_ogn::planche::mise_a_jour::MiseAJourObsoletes;
-use brick_ogn::planche::MiseAJour;
-use brick_ogn::planche::{MettreAJour, Planche};
+use brick_ogn::flightlog::update::ObsoleteUpdates;
+use brick_ogn::flightlog::update::Update;
+use brick_ogn::flightlog::FlightLog;
 use serveur::client::{Client, VariationRequete};
 use serveur::ogn::synchronisation_ogn;
-use serveur::planche::Stockage;
-use serveur::{data_dir, ActifServeur, Configuration};
+use serveur::flightlog::Storage;
+use serveur::{data_dir, Context, Configuration};
 
 use chrono::NaiveDate;
 
@@ -45,49 +44,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     log::info!("Démarrage...");
 
-    let date_aujourdhui = chrono::Local::now().date_naive();
-    let requetes_en_cours: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
+    let date_today = chrono::Local::now().date_naive();
+    let current_requests: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
     //let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
-    let adresse = SocketAddr::from(([0, 0, 0, 0], configuration.clone().port as u16));
+    let adress = SocketAddr::from(([0, 0, 0, 0], configuration.clone().port as u16));
     // creation du dossier de travail si besoin
     if !(crate::data_dir().as_path().exists()) {
         fs::create_dir_all(data_dir().as_path())
             .expect("Could not create data_dir on your platform.");
-        log::info!("Dossier de travail créé.");
+        log::info!("Create dir for data.");
     }
 
-    let planche_arc: Arc<Mutex<Planche>> = Arc::new(Mutex::new(Planche::new()));
-    let planche = Planche::depuis_disque(date_aujourdhui).unwrap();
-    {
-        let mut planche_lock = planche_arc.lock().unwrap();
-        *planche_lock = planche;
-        drop(planche_lock);
-    }
+    let flightlog = FlightLog::load(date_today).unwrap();
+    let flightlog_arc: Arc<Mutex<FlightLog>> = Arc::new(Mutex::new(flightlog));
 
-    let majs_arc: Arc<Mutex<Vec<MiseAJour>>> = Arc::new(Mutex::new(Vec::new()));
-    let actif_serveur: ActifServeur = ActifServeur {
+    let updates_arc: Arc<Mutex<Vec<Update>>> = Arc::new(Mutex::new(Vec::new()));
+    let context: Context = Context {
         configuration,
-        planche: planche_arc,
-        majs: majs_arc,
-        requetes_en_cours,
+        flightlog: flightlog_arc,
+        updates: updates_arc,
+        current_requests,
     };
 
-    let actif_serveur_clone = actif_serveur.clone();
+    let ctx_clone = context.clone();
     let service = make_service_fn(|_conn| {
-        let actif_serveur = actif_serveur_clone.clone();
+        let context = ctx_clone.clone();
         async move {
             Ok::<_, Infallible>(service_fn(move |req| {
-                gestion_connexion(req, actif_serveur.clone())
+                gestion_connexion(req, context.clone())
             }))
         }
     });
     //on spawn le thread qui va s'occuper de ogn
     tokio::spawn(async move {
-        log::info!("Lancement du thread qui s'occupe des requetes OGN automatiquement.");
+        log::info!("Launching the OGN thread.");
         loop {
-            synchronisation_ogn(&actif_serveur).await.unwrap();
+            synchronisation_ogn(&context).await.unwrap();
             tokio::time::sleep(tokio::time::Duration::from_secs(
-                actif_serveur
+                context
                     .clone()
                     .configuration
                     .clone()
@@ -96,118 +90,117 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             .await; //5 minutes
         }
     });
-    let serveur = Server::bind(&adresse)
+    let server = Server::bind(&adress)
         .serve(service)
         .with_graceful_shutdown(signal_extinction());
-    log::info!("Serveur démarré.");
-    serveur.await?;
-    //drop(actif_serveur);
+    log::info!("Server started.");
+    server.await?;
+    //drop(context);
     Ok(())
 }
 
 async fn gestion_connexion(
     req: Request<Body>,
-    actif_serveur: ActifServeur,
+    context: Context,
 ) -> Result<Response<Body>, Box<dyn std::error::Error + Send + Sync>> {
-    let adresse = req.uri().path().to_string().clone();
-    let date_aujourdhui = chrono::Local::now().date_naive();
+    let adress = req.uri().path().to_string().clone();
+    let today = chrono::Local::now().date_naive();
 
-    actif_serveur
-        .requetes_en_cours
+    context
+        .current_requests
         .clone()
-        .incrementer(adresse.clone());
-    let (parties, body) = req.into_parts();
+        .incrementer(adress.clone());
+    let (parts, body) = req.into_parts();
 
     let mut full_path_b = dirs::data_dir().expect(
         "Could not deduce where to store \
         files. Check your platform compatibility with dirs \
         (https://crates.io/crates/dirs) crate.",
     );
-    full_path_b.push(parties.uri.path());
+    full_path_b.push(parts.uri.path());
 
     let corps_str = std::str::from_utf8(&hyper::body::to_bytes(body).await?)
         .unwrap()
         .to_string();
 
     log::info!(
-        "Requete du fichier {} {}",
+        "Request of file {} {}",
         &full_path_b
             .to_str()
             .expect("Path to standard storage is not valid UTF-8 !"),
-        &parties.uri.query().unwrap_or_default()
+        &parts.uri.query().unwrap_or_default()
     );
 
-    let mut reponse = Response::new(Body::empty());
+    let mut response = Response::new(Body::empty());
 
-    match (&parties.method, parties.uri.path()) {
-        (&Method::GET, "/planche") => {
-            reponse
+    match (&parts.method, parts.uri.path()) {
+        (&Method::GET, "/flightlog") => {
+            response
                 .headers_mut()
                 .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-            reponse.headers_mut().insert(
+            response.headers_mut().insert(
                 ACCESS_CONTROL_ALLOW_HEADERS,
                 "content-type, origin".parse().unwrap(),
             );
-            reponse
+            response
                 .headers_mut()
                 .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-            let query = parties.uri.query();
+            let query = parts.uri.query();
             let date = match query {
                 Some(query_str) => NaiveDate::parse_from_str(query_str, "date=%Y/%m/%d")
-                    .unwrap_or(date_aujourdhui),
-                None => date_aujourdhui,
+                    .unwrap_or(today),
+                None => today,
             };
-            if date == date_aujourdhui {
+            if date == today {
                 //on recupere la liste de planche
-                let planche_lock = actif_serveur.planche.lock().unwrap();
-                let clone_planche = (*planche_lock).clone();
-                drop(planche_lock);
-                *reponse.body_mut() = Body::from(clone_planche.vers_json());
+                let flightlog_lock = context.flightlog.lock().unwrap();
+                let clone_planche = (*flightlog_lock).clone();
+                drop(flightlog_lock);
+                *response.body_mut() = Body::from(serde_json::to_string(&clone_planche).unwrap_or_default());
             } else {
-                *reponse.body_mut() =
-                    Body::from(Planche::du(date, &actif_serveur).await.unwrap().vers_json());
+                *response.body_mut() =
+                    Body::from(serde_json::to_string(&FlightLog::from_day(date, &context).await.unwrap()).unwrap_or_default());
             }
         }
-        (&Method::GET, "/majs") => {
-            reponse
+        (&Method::GET, "/updates") => {
+            response
                 .headers_mut()
                 .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-            reponse.headers_mut().insert(
+            response.headers_mut().insert(
                 ACCESS_CONTROL_ALLOW_HEADERS,
                 "content-type, origin".parse().unwrap(),
             );
-            reponse
+            response
                 .headers_mut()
                 .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-            let mut majs_lock = actif_serveur.majs.lock().unwrap();
+            let mut majs_lock = context.updates.lock().unwrap();
             let majs = (*majs_lock).clone();
-            (*majs_lock).enlever_majs_obsoletes(chrono::Duration::minutes(5));
+            (*majs_lock).remove_obsolete_updates(chrono::Duration::minutes(5));
             drop(majs_lock);
-            *reponse.body_mut() = Body::from(majs.vers_json());
+            *response.body_mut() = Body::from(serde_json::to_string(&majs).unwrap_or_default());
         }
         (&Method::GET, "/infos.json") => {
-            reponse
+            response
                 .headers_mut()
                 .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-            reponse.headers_mut().insert(
+            response.headers_mut().insert(
                 ACCESS_CONTROL_ALLOW_HEADERS,
                 "content-type, origin".parse().unwrap(),
             );
-            reponse
+            response
                 .headers_mut()
                 .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
             let path = data_dir()
                 .as_path()
                 .join(std::path::Path::new("infos.json"));
-            *reponse.body_mut() = Body::from(fs::read_to_string(path).unwrap_or_else(|err| {
+            *response.body_mut() = Body::from(fs::read_to_string(path).unwrap_or_else(|err| {
                 log::warn!("Could not load infos.json : {}", err);
-                *reponse.status_mut() = hyper::StatusCode::NOT_FOUND;
+                *response.status_mut() = hyper::StatusCode::NOT_FOUND;
                 "{}".to_string()
             }));
         }
         (&Method::POST, "/majs") => {
             // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
-            let mut mise_a_jour = MiseAJour::new();
             let mut corps_json_nettoye = String::new(); //necessite de creer une string qui va contenir
                                                         //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
             for char in corps_str.chars() {
@@ -216,50 +209,48 @@ async fn gestion_connexion(
                 }
             }
 
-            mise_a_jour
-                .parse(json::parse(&corps_json_nettoye).unwrap())
-                .unwrap();
+            let update: Update = serde_json::from_str(&corps_json_nettoye).unwrap_or_default();
             let date_aujourdhui = chrono::Local::now().date_naive();
             {
                 // On ajoute la mise a jour au vecteur de mises a jour
-                let mut majs_lock = actif_serveur.majs.lock().unwrap();
-                (*majs_lock).push(mise_a_jour.clone());
+                let mut updates_lock = context.updates.lock().unwrap();
+                (*updates_lock).push(update.clone());
             }
 
-            if mise_a_jour.date != date_aujourdhui {
-                let mut planche_voulue = Planche::du(mise_a_jour.date, &actif_serveur).await?;
-                planche_voulue.mettre_a_jour(mise_a_jour);
-                planche_voulue.enregistrer();
+            if update.date != date_aujourdhui {
+                let mut planche_voulue = FlightLog::from_day(update.date, &context).await?;
+                planche_voulue.update(update);
+                planche_voulue.save();
             } else {
-                let mut planche_lock = actif_serveur.planche.lock().unwrap();
-                (*planche_lock).mettre_a_jour(mise_a_jour);
-                (*planche_lock).enregistrer();
-                drop(planche_lock);
+                let mut flightlog_lock = context.flightlog.lock().unwrap();
+                (*flightlog_lock).update(update);
+                (*flightlog_lock).save();
+                drop(flightlog_lock);
             }
-            reponse
+            response
                 .headers_mut()
                 .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-            reponse
+            response
                 .headers_mut()
                 .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
         }
         (&Method::OPTIONS, "/majs") => {
             // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
-            *reponse.status_mut() = StatusCode::NO_CONTENT;
-            reponse
+            *response.status_mut() = StatusCode::NO_CONTENT;
+            response
                 .headers_mut()
                 .insert(CONNECTION, "keep-alive".parse().unwrap());
-            reponse
+            response
                 .headers_mut()
                 .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-            reponse
+            response
                 .headers_mut()
                 .insert(ACCESS_CONTROL_MAX_AGE, "86400".parse().unwrap());
-            reponse.headers_mut().insert(
+            response.headers_mut().insert(
                 ACCESS_CONTROL_ALLOW_METHODS,
                 "POST, OPTIONS".parse().unwrap(),
             );
-            reponse.headers_mut().insert(
+            response.headers_mut().insert(
                 ACCESS_CONTROL_ALLOW_HEADERS,
                 "origin, content-type".parse().unwrap(),
             );
@@ -267,12 +258,12 @@ async fn gestion_connexion(
         _ => {
             log::error!(
                 "Method or path not available : {:?}; {:?}; {:?}",
-                &parties.method,
-                &parties.uri.path(),
-                &parties.uri.query()
+                &parts.method,
+                &parts.uri.path(),
+                &parts.uri.query()
             );
-            *reponse.status_mut() = hyper::StatusCode::NOT_FOUND;
-            *reponse.body_mut() = Body::from(
+            *response.status_mut() = hyper::StatusCode::NOT_FOUND;
+            *response.body_mut() = Body::from(
                 fs::read_to_string(data_dir().as_path().join("404.html")).unwrap_or_else(|err| {
                     log::warn!(
                         "Could not load 404.html : {} Please add it to $XDG_DATA_DIR/cepo.",
@@ -284,15 +275,15 @@ async fn gestion_connexion(
         }
     };
 
-    // actif_serveur.requetes_en_cours.clone().decrementer(adresse);
-    Ok(reponse)
+    // context.requetes_en_cours.clone().decrementer(adresse);
+    Ok(response)
 }
 
 async fn signal_extinction() {
     // Attendre pour le signal CTRL+C
     tokio::signal::ctrl_c()
         .await
-        .expect("Echec a l'installation du gestionnaire de signal Ctrl-C");
+        .expect("Failed to install signal handler for Ctrl-C");
 }
 
 mod tests;
