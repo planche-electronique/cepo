@@ -8,7 +8,7 @@ use brick_ogn::flightlog::FlightLog;
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use log;
 pub use brick_ogn::flightlog::update::Update;
-use std::fs;
+use tokio::fs;
 /// A trait that cares about the storage of a FlightLog on a computer.
 #[async_trait]
 pub trait Storage {
@@ -23,9 +23,9 @@ pub trait Storage {
         context: &Context,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
     /// Loading FlightLog from the disk only, without updating.
-    fn load(date: NaiveDate) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>>;
+    async fn load(date: NaiveDate) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>>;
     /// Savinfg on the disk only, wuthout updating/
-    fn save(&self);
+    async fn save(&self);
 }
 
 #[async_trait]
@@ -39,7 +39,7 @@ impl Storage for FlightLog {
         let day = date.day();
 
         create_fs_path_day(year, month, day);
-        let mut flightlog = FlightLog::load(date).unwrap();
+        let mut flightlog = FlightLog::load(date).await.unwrap();
         flightlog.update_ogn(context).await?;
         let _ = flightlog.save();
         Ok(flightlog)
@@ -102,7 +102,7 @@ impl Storage for FlightLog {
         Ok(())
     }
 
-    fn load(date: NaiveDate) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>> {
+    async fn load(date: NaiveDate) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>> {
         let year = date.year();
         let month = date.month();
         let day = date.day();
@@ -122,13 +122,13 @@ impl Storage for FlightLog {
             year, month_str, day_str
         ));
 
-        let flightlog_str = fs::read_to_string(path).unwrap_or_default();
+        let flightlog_str = fs::read_to_string(path).await.unwrap_or_default();
         let flightlog = serde_json::from_str(&flightlog_str)?;
 
         Ok(flightlog)
     }
 
-    fn save(&self) {
+    async fn save(&self) {
         let date = self.date;
         let year = date.year();
         let month = date.month();
@@ -143,7 +143,7 @@ impl Storage for FlightLog {
             year, month_str, day_str
         ));
 
-        fs::write(&file_path, serde_json::to_string(self).unwrap_or_default()).unwrap();
+        fs::write(&file_path, serde_json::to_string(self).unwrap_or_default()).await.unwrap();
 
         log::info!("Saved FlightLog of the {year}/{month_str}/{day_str}.");
     }

@@ -161,6 +161,6 @@ pub async fn synchronisation_ogn(
     let mut flightlog_lock = context.flightlog.lock().unwrap();
     *flightlog_lock = old_flightlog.clone();
     drop(flightlog_lock);
-    old_flightlog.save();
+    let _ = old_flightlog.save();
     Ok(())
 }

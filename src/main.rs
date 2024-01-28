@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         log::info!("Create dir for data.");
     }
 
-    let flightlog = FlightLog::load(date_today).unwrap();
+    let flightlog = FlightLog::load(date_today).await.unwrap();
     let flightlog_arc: Arc<Mutex<FlightLog>> = Arc::new(Mutex::new(flightlog));
 
     let updates_arc: Arc<Mutex<Vec<Update>>> = Arc::new(Mutex::new(Vec::new()));
@@ -219,11 +219,11 @@ async fn connection_handler(
             if update.date != today {
                 let mut wanted_flightlog = FlightLog::from_day(update.date, &context).await?;
                 wanted_flightlog.update(update);
-                wanted_flightlog.save();
+                wanted_flightlog.save().await;
             } else {
                 let mut flightlog_lock = context.flightlog.lock().unwrap();
                 (*flightlog_lock).update(update);
-                (*flightlog_lock).save();
+                let _ = (*flightlog_lock).save();
                 drop(flightlog_lock);
             }
             response
