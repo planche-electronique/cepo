@@ -1,4 +1,5 @@
-//! Module des planche, i.e. un ensemble de plusieurs [`Vol`] et d'affectation.
+//! FlightLog: an object to represent a group of flights and the organization 
+//! on the ground at the moment.
 
 use crate::ogn::ogn_flights;
 use crate::{create_fs_path_day, nb_2digits_string, Context};
@@ -8,23 +9,22 @@ use chrono::{Datelike, NaiveDate, NaiveTime};
 use log;
 pub use brick_ogn::flightlog::update::Update;
 use std::fs;
-/// Un trait qui a pour attrait de s'occuper du stockage (chargement depuyis
-/// le disque et vers le disque du type planche mais aussi plus general).
+/// A trait that cares about the storage of a FlightLog on a computer.
 #[async_trait]
 pub trait Storage {
-    /// Vols chargés depuis le disque et mis à jour depuis OGN.
+    /// FlightLog from the disk and updated from ogn.
     async fn from_day(
         date: NaiveDate,
-        actif_serveur: &Context,
+        context: &Context,
     ) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>>;
-    /// Mise à jour de la planche à l'aide d'une requête OGN.
+    /// Updating the flightlog from ogn.
     async fn update_ogn(
         &mut self,
-        actif_serveur: &Context,
+        context: &Context,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    /// Chargement de la planche depuis le disque.
+    /// Loading FlightLog from the disk only, without updating.
     fn load(date: NaiveDate) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>>;
-    /// Enregistrement de la planche sur le disque
+    /// Savinfg on the disk only, wuthout updating/
     fn save(&self);
 }
 
@@ -32,94 +32,94 @@ pub trait Storage {
 impl Storage for FlightLog {
     async fn from_day(
         date: NaiveDate,
-        actif_serveur: &Context,
+        context: &Context,
     ) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>> {
         let year: i32 = date.year();
         let month = date.month();
         let day = date.day();
 
         create_fs_path_day(year, month, day);
-        let mut planche = FlightLog::load(date).unwrap();
-        planche.update_ogn(actif_serveur).await?;
-        let _ = planche.save();
-        Ok(planche)
+        let mut flightlog = FlightLog::load(date).unwrap();
+        flightlog.update_ogn(context).await?;
+        let _ = flightlog.save();
+        Ok(flightlog)
     }
 
     async fn update_ogn(
         &mut self,
-        actif_serveur: &Context,
+        context: &Context,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let date = chrono::Local::now().date_naive();
-        //on teste les égalités et on remplace si besoin
-        let last_flights = ogn_flights(date, actif_serveur.configuration.oaci.clone()).await?;
-        let mut rang_prochain_vol = 0;
-        let mut priorite_prochain_vol = 0;
-        let ancienne_planche = self;
+        // We test equalities and we replace if needed.
+        let last_flights = ogn_flights(date, context.configuration.oaci.clone()).await?;
+        let mut index_next_flight = 0;
+        let mut priority_next_flight = 0;
+        let old_flightlog = self;
         #[allow(unused_assignments)]
-        for (mut rang_nouveau_vol, nouveau_vol) in last_flights.into_iter().enumerate() {
-            let mut existe = false;
-            for ancien_vol in &mut ancienne_planche.flights {
-                // si on est sur le meme vol
-                if nouveau_vol.ogn_nb == ancien_vol.ogn_nb {
-                    existe = true;
+        for (mut index_new_flight, new_flight) in last_flights.into_iter().enumerate() {
+            let mut exists = false;
+            for old_flight in &mut old_flightlog.flights {
+                // if on the same flight
+                if new_flight.ogn_nb == old_flight.ogn_nb {
+                    exists = true;
                     let heure_default = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
-                    //teste les différentes valeurs qui peuvent être mises a jour
-                    if ancien_vol.takeoff == heure_default {
-                        ancien_vol.takeoff = nouveau_vol.takeoff;
+                    //test the different values that can be updated
+                    if old_flight.takeoff == heure_default {
+                        old_flight.takeoff = new_flight.takeoff;
                     }
-                    if ancien_vol.landing == heure_default {
-                        ancien_vol.landing = nouveau_vol.landing;
+                    if old_flight.landing == heure_default {
+                        old_flight.landing = new_flight.landing;
                     }
-                } else if nouveau_vol.glider == ancien_vol.glider {
-                    if priorite_prochain_vol != 0 {
-                        if priorite_prochain_vol < nouveau_vol.ogn_nb
-                            && nouveau_vol.ogn_nb < 0
+                } else if new_flight.glider == old_flight.glider {
+                    if priority_next_flight != 0 {
+                        if priority_next_flight < new_flight.ogn_nb
+                            && new_flight.ogn_nb < 0
                         {
-                            existe = true;
-                            priorite_prochain_vol = nouveau_vol.ogn_nb;
-                            rang_prochain_vol = rang_nouveau_vol;
+                            exists = true;
+                            priority_next_flight = new_flight.ogn_nb;
+                            index_next_flight = index_new_flight;
                         }
-                    } else if nouveau_vol.ogn_nb < 0 && priorite_prochain_vol == 0 {
-                        existe = true;
-                        priorite_prochain_vol = nouveau_vol.ogn_nb;
-                        rang_prochain_vol = rang_nouveau_vol;
+                    } else if new_flight.ogn_nb < 0 && priority_next_flight == 0 {
+                        exists = true;
+                        priority_next_flight = new_flight.ogn_nb;
+                        index_next_flight = index_new_flight;
                     }
                 }
             }
-            if priorite_prochain_vol != 0 {
-                // on recupere le vol affecté avec le plus de priorité et on lui affecte les données de ogn
-                ancienne_planche.flights[rang_prochain_vol].ogn_nb = nouveau_vol.ogn_nb;
-                ancienne_planche.flights[rang_prochain_vol].takeoff_code =
-                    nouveau_vol.takeoff_code.clone();
-                ancienne_planche.flights[rang_prochain_vol].takeoff = nouveau_vol.takeoff;
-                ancienne_planche.flights[rang_prochain_vol].landing = nouveau_vol.landing;
+            if priority_next_flight != 0 {
+                // We get the flight with the highest priority and we write on it the data from OGN.
+                old_flightlog.flights[index_next_flight].ogn_nb = new_flight.ogn_nb;
+                old_flightlog.flights[index_next_flight].takeoff_code =
+                    new_flight.takeoff_code.clone();
+                old_flightlog.flights[index_next_flight].takeoff = new_flight.takeoff;
+                old_flightlog.flights[index_next_flight].landing = new_flight.landing;
             }
-            if !existe {
-                ancienne_planche.flights.push(nouveau_vol);
+            if !exists {
+                old_flightlog.flights.push(new_flight);
             }
-            rang_nouveau_vol += 1;
+            index_new_flight += 1;
         }
         Ok(())
     }
 
     fn load(date: NaiveDate) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>> {
-        let annee = date.year();
-        let mois = date.month();
-        let jour = date.day();
+        let year = date.year();
+        let month = date.month();
+        let day = date.day();
         log::info!(
             "Loading FlightLog from the disk {}/{}/{}",
-            annee,
-            mois,
-            jour
+            year,
+            month,
+            day
         );
 
-        let mois_str = nb_2digits_string(mois as i32);
-        let jour_str = nb_2digits_string(jour as i32);
+        let month_str = nb_2digits_string(month as i32);
+        let day_str = nb_2digits_string(day as i32);
 
         let mut path = crate::data_dir();
         path.push(format!(
             "{}/{}/{}/affectations.json",
-            annee, mois_str, jour_str
+            year, month_str, day_str
         ));
 
         let flightlog_str = fs::read_to_string(path).unwrap_or_default();
@@ -130,21 +130,21 @@ impl Storage for FlightLog {
 
     fn save(&self) {
         let date = self.date;
-        let annee = date.year();
-        let mois = date.month();
-        let jour = date.day();
+        let year = date.year();
+        let month = date.month();
+        let day = date.day();
 
-        let jour_str = nb_2digits_string(jour as i32);
-        let mois_str = nb_2digits_string(mois as i32);
+        let day_str = nb_2digits_string(day as i32);
+        let month_str = nb_2digits_string(month as i32);
 
         let mut file_path = crate::data_dir();
         file_path.push(format!(
             "{}/{}/{}/affectations.json",
-            annee, mois_str, jour_str
+            year, month_str, day_str
         ));
 
         fs::write(&file_path, serde_json::to_string(self).unwrap_or_default()).unwrap();
 
-        log::info!("Affectations du {annee}/{mois_str}/{jour_str} enregistrees.");
+        log::info!("Saved FlightLog of the {year}/{month_str}/{day_str}.");
     }
 }
