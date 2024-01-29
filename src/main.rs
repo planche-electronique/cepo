@@ -5,9 +5,9 @@ use brick_ogn::flightlog::update::ObsoleteUpdates;
 use brick_ogn::flightlog::update::Update;
 use brick_ogn::flightlog::FlightLog;
 use serveur::client::{Client, UsageControl};
-use serveur::ogn::synchronisation_ogn;
 use serveur::flightlog::Storage;
-use serveur::{data_dir, Context, Configuration};
+use serveur::ogn::synchronisation_ogn;
+use serveur::{data_dir, Configuration, Context};
 
 use chrono::NaiveDate;
 
@@ -18,12 +18,10 @@ use std::convert::Infallible;
 use std::net::{IpAddr, SocketAddr};
 
 use hyper::header::*;
+use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use hyper::{Method, StatusCode};
-use hyper::server::conn::AddrStream;
-
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -78,22 +76,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             let context_clone = context_clone.clone();
             let remote_addr = remote_addr.clone();
             Ok::<_, Infallible>(service_fn(move |req| {
-            connection_handler(req, context_clone.clone(), remote_addr)
-        }))
+                connection_handler(req, context_clone.clone(), remote_addr)
+            }))
         }
     });
     let f_synchronisation_secs_clone = context
         .clone()
         .configuration
         .clone()
-        .f_synchronisation_secs.clone() as u64;
+        .f_synchronisation_secs
+        .clone() as u64;
     //on spawn le thread qui va s'occuper de ogn
     tokio::spawn(async move {
         log::info!("Launching the OGN thread.");
         loop {
             synchronisation_ogn(&context).await.unwrap();
             tokio::time::sleep(tokio::time::Duration::from_secs(
-                f_synchronisation_secs_clone
+                f_synchronisation_secs_clone,
             ))
             .await; //5 minutes
         }
@@ -110,185 +109,193 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 async fn connection_handler(
     req: Request<Body>,
     context: Context,
-    remote_addr: IpAddr
+    remote_addr: IpAddr,
 ) -> Result<Response<Body>, Box<dyn std::error::Error + Send + Sync>> {
     let today = chrono::Local::now().date_naive();
 
-    context
+    if context
         .current_requests
         .clone()
-        .increase_usage(&remote_addr);
-    let (parts, body) = req.into_parts();
+        .increase_usage(&remote_addr)
+    {
+        let (parts, body) = req.into_parts();
 
-    let mut full_path_b = dirs::data_dir().expect(
-        "Could not deduce where to store \
+        let mut full_path_b = dirs::data_dir().expect(
+            "Could not deduce where to store \
         files. Check your platform compatibility with dirs \
         (https://crates.io/crates/dirs) crate.",
-    );
-    full_path_b.push(parts.uri.path());
+        );
+        full_path_b.push(parts.uri.path());
 
-    let corps_str = std::str::from_utf8(&hyper::body::to_bytes(body).await?)
-        .unwrap()
-        .to_string();
+        let corps_str = std::str::from_utf8(&hyper::body::to_bytes(body).await?)
+            .unwrap()
+            .to_string();
 
-    log::info!(
-        "Request of file {} {}",
-        &full_path_b
-            .to_str()
-            .expect("Path to standard storage is not valid UTF-8 !"),
-        &parts.uri.query().unwrap_or_default()
-    );
+        log::info!(
+            "Request of file {} {}",
+            &full_path_b
+                .to_str()
+                .expect("Path to standard storage is not valid UTF-8 !"),
+            &parts.uri.query().unwrap_or_default()
+        );
 
-    let mut response = Response::new(Body::empty());
+        let mut response = Response::new(Body::empty());
 
-    match (&parts.method, parts.uri.path()) {
-        (&Method::GET, "/flightlog") => {
-            response
-                .headers_mut()
-                .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-            response.headers_mut().insert(
-                ACCESS_CONTROL_ALLOW_HEADERS,
-                "content-type, origin".parse().unwrap(),
-            );
-            response
-                .headers_mut()
-                .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-            let query = parts.uri.query();
-            let date = match query {
-                Some(query_str) => NaiveDate::parse_from_str(query_str, "date=%Y/%m/%d")
-                    .unwrap_or(today),
-                None => today,
-            };
-            if date == today {
-                //on recupere la liste de planche
-                let flightlog_lock = context.flightlog.lock().unwrap();
-                let clone_planche = (*flightlog_lock).clone();
-                drop(flightlog_lock);
-                *response.body_mut() = Body::from(serde_json::to_string(&clone_planche).unwrap_or_default());
-            } else {
-                *response.body_mut() =
-                    Body::from(serde_json::to_string(&FlightLog::from_day(date, &context).await.unwrap()).unwrap_or_default());
-            }
-        }
-        (&Method::GET, "/updates") => {
-            response
-                .headers_mut()
-                .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-            response.headers_mut().insert(
-                ACCESS_CONTROL_ALLOW_HEADERS,
-                "content-type, origin".parse().unwrap(),
-            );
-            response
-                .headers_mut()
-                .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-            let mut updates_lock = context.updates.lock().unwrap();
-            let majs = (*updates_lock).clone();
-            (*updates_lock).remove_obsolete_updates(chrono::Duration::minutes(5));
-            drop(updates_lock);
-            *response.body_mut() = Body::from(serde_json::to_string(&majs).unwrap_or_default());
-        }
-        (&Method::GET, "/infos.json") => {
-            response
-                .headers_mut()
-                .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-            response.headers_mut().insert(
-                ACCESS_CONTROL_ALLOW_HEADERS,
-                "content-type, origin".parse().unwrap(),
-            );
-            response
-                .headers_mut()
-                .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-            let path = data_dir()
-                .as_path()
-                .join(std::path::Path::new("infos.json"));
-            *response.body_mut() = Body::from(fs::read_to_string(path).unwrap_or_else(|err| {
-                log::warn!("Could not load infos.json : {}", err);
-                *response.status_mut() = hyper::StatusCode::NOT_FOUND;
-                "{}".to_string()
-            }));
-        }
-        (&Method::POST, "/majs") => {
-            // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
-            let mut clean_json = String::new(); //necessite de creer une string qui va contenir
-                                                        //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
-            for char in corps_str.chars() {
-                if char as u32 != 0 {
-                    clean_json.push_str(char.to_string().as_str());
+        match (&parts.method, parts.uri.path()) {
+            (&Method::GET, "/flightlog") => {
+                response
+                    .headers_mut()
+                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+                response.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_HEADERS,
+                    "content-type, origin".parse().unwrap(),
+                );
+                response
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+                let query = parts.uri.query();
+                let date = match query {
+                    Some(query_str) => {
+                        NaiveDate::parse_from_str(query_str, "date=%Y/%m/%d").unwrap_or(today)
+                    }
+                    None => today,
+                };
+                if date == today {
+                    //on recupere la liste de planche
+                    let flightlog_lock = context.flightlog.lock().unwrap();
+                    let clone_planche = (*flightlog_lock).clone();
+                    drop(flightlog_lock);
+                    *response.body_mut() =
+                        Body::from(serde_json::to_string(&clone_planche).unwrap_or_default());
+                } else {
+                    *response.body_mut() = Body::from(
+                        serde_json::to_string(&FlightLog::from_day(date, &context).await.unwrap())
+                            .unwrap_or_default(),
+                    );
                 }
             }
-
-            let update: Update = serde_json::from_str(&clean_json).unwrap_or_default();
-            {
-                // On ajoute la mise a jour au vecteur de mises a jour
+            (&Method::GET, "/updates") => {
+                response
+                    .headers_mut()
+                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+                response.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_HEADERS,
+                    "content-type, origin".parse().unwrap(),
+                );
+                response
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
                 let mut updates_lock = context.updates.lock().unwrap();
-                (*updates_lock).push(update.clone());
+                let majs = (*updates_lock).clone();
+                (*updates_lock).remove_obsolete_updates(chrono::Duration::minutes(5));
+                drop(updates_lock);
+                *response.body_mut() = Body::from(serde_json::to_string(&majs).unwrap_or_default());
             }
-
-            if update.date != today {
-                let mut wanted_flightlog = FlightLog::from_day(update.date, &context).await?;
-                wanted_flightlog.update(update);
-                wanted_flightlog.save().await;
-            } else {
-                let mut flightlog_lock = context.flightlog.lock().unwrap();
-                (*flightlog_lock).update(update);
-                let _ = (*flightlog_lock).save();
-                drop(flightlog_lock);
+            (&Method::GET, "/infos.json") => {
+                response
+                    .headers_mut()
+                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+                response.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_HEADERS,
+                    "content-type, origin".parse().unwrap(),
+                );
+                response
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+                let path = data_dir()
+                    .as_path()
+                    .join(std::path::Path::new("infos.json"));
+                *response.body_mut() = Body::from(fs::read_to_string(path).unwrap_or_else(|err| {
+                    log::warn!("Could not load infos.json : {}", err);
+                    *response.status_mut() = hyper::StatusCode::NOT_FOUND;
+                    "{}".to_string()
+                }));
             }
-            response
-                .headers_mut()
-                .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-            response
-                .headers_mut()
-                .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-        }
-        (&Method::OPTIONS, "/majs") => {
-            // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
-            *response.status_mut() = StatusCode::NO_CONTENT;
-            response
-                .headers_mut()
-                .insert(CONNECTION, "keep-alive".parse().unwrap());
-            response
-                .headers_mut()
-                .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-            response
-                .headers_mut()
-                .insert(ACCESS_CONTROL_MAX_AGE, "86400".parse().unwrap());
-            response.headers_mut().insert(
-                ACCESS_CONTROL_ALLOW_METHODS,
-                "POST, OPTIONS".parse().unwrap(),
-            );
-            response.headers_mut().insert(
-                ACCESS_CONTROL_ALLOW_HEADERS,
-                "origin, content-type".parse().unwrap(),
-            );
-        }
-        _ => {
-            log::error!(
-                "Method or path not available : {:?}; {:?}; {:?}",
-                &parts.method,
-                &parts.uri.path(),
-                &parts.uri.query()
-            );
-            *response.status_mut() = hyper::StatusCode::NOT_FOUND;
-            *response.body_mut() = Body::from(
-                fs::read_to_string(data_dir().as_path().join("404.html")).unwrap_or_else(|err| {
-                    log::warn!(
-                        "Could not load 404.html : {} Please add it to $XDG_DATA_DIR/cepo.",
-                        err
-                    );
-                    "".to_string()
-                }),
-            );
-        }
-    };
+            (&Method::POST, "/majs") => {
+                // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
+                let mut clean_json = String::new(); //necessite de creer une string qui va contenir
+                                                    //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
+                for char in corps_str.chars() {
+                    if char as u32 != 0 {
+                        clean_json.push_str(char.to_string().as_str());
+                    }
+                }
 
-    context
-        .current_requests
-        .clone()
-        .decrease_usage(&remote_addr);
+                let update: Update = serde_json::from_str(&clean_json).unwrap_or_default();
+                {
+                    // On ajoute la mise a jour au vecteur de mises a jour
+                    let mut updates_lock = context.updates.lock().unwrap();
+                    (*updates_lock).push(update.clone());
+                }
 
-    // context.requetes_en_cours.clone().decrementer(adresse);
-    Ok(response)
+                if update.date != today {
+                    let mut wanted_flightlog = FlightLog::from_day(update.date, &context).await?;
+                    wanted_flightlog.update(update);
+                    wanted_flightlog.save().await;
+                } else {
+                    let mut flightlog_lock = context.flightlog.lock().unwrap();
+                    (*flightlog_lock).update(update);
+                    let _ = (*flightlog_lock).save();
+                    drop(flightlog_lock);
+                }
+                response
+                    .headers_mut()
+                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+                response
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+            }
+            (&Method::OPTIONS, "/majs") => {
+                // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
+                *response.status_mut() = StatusCode::NO_CONTENT;
+                response
+                    .headers_mut()
+                    .insert(CONNECTION, "keep-alive".parse().unwrap());
+                response
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+                response
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_MAX_AGE, "86400".parse().unwrap());
+                response.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_METHODS,
+                    "POST, OPTIONS".parse().unwrap(),
+                );
+                response.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_HEADERS,
+                    "origin, content-type".parse().unwrap(),
+                );
+            }
+            _ => {
+                log::error!(
+                    "Method or path not available : {:?}; {:?}; {:?}",
+                    &parts.method,
+                    &parts.uri.path(),
+                    &parts.uri.query()
+                );
+                *response.status_mut() = hyper::StatusCode::NOT_FOUND;
+                *response.body_mut() = Body::from(
+                    fs::read_to_string(data_dir().as_path().join("404.html")).unwrap_or_else(
+                        |err| {
+                            log::warn!(
+                                "Could not load 404.html : {} Please add it to $XDG_DATA_DIR/cepo.",
+                                err
+                            );
+                            "".to_string()
+                        },
+                    ),
+                );
+            }
+        };
+
+        context
+            .current_requests
+            .clone()
+            .decrease_usage(&remote_addr);
+        Ok(response)
+    } else {
+        Err("Too many request from this user".into())
+    }
 }
 
 async fn signal_extinction() {

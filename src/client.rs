@@ -7,7 +7,7 @@ use std::{net::IpAddr, sync::{Arc, Mutex}};
 pub trait UsageControl {
     /// Increase by one the counter of active request of a [`Client`] and create
     /// if needed the entry for him in [`self`].
-    fn increase_usage(&mut self, adresse: &IpAddr);
+    fn increase_usage(&mut self, adresse: &IpAddr) -> bool;
     /// Decrease by one the counter of active request of a [`Client`] and delete
     /// if needed the entry for him in [`self`].
     fn decrease_usage(&mut self, adresse: &IpAddr);
@@ -23,28 +23,32 @@ pub struct Client {
 }
 
 impl UsageControl for Vec<Client> {
-    fn increase_usage(&mut self, adresse: &IpAddr) {
-        let mut adresse_existe: bool = false;
-        for mut client in self.clone() {
-            if client.adresse == *adresse {
-                if client.requetes_en_cours < 10 {
-                    client.requetes_en_cours += 1;
-                    adresse_existe = true;
-                    log::info!(
-                        "Handling request {}; add to register.",
-                        &adresse
-                    );
-                } else {
-                    log::info!("No more request authorized for {}", adresse);
-                }
-            }
+    fn increase_usage(&mut self, adresse: &IpAddr) -> bool {
+        let mut i = 0;
+        while i < self.len() && self[i].adresse != *adresse {
+            i += 1;
         }
-        if !adresse_existe {
+        if i == self.len() {
             self.push(Client {
                 adresse: *adresse,
                 requetes_en_cours: 1,
             });
             log::info!("Adding address : {} to the connection log.", adresse);
+            true
+        } else if self[i].adresse == *adresse {
+            if self[i].requetes_en_cours < 10 {
+                self[i].requetes_en_cours += 1;
+                log::info!(
+                    "Handling request {}; add to register.",
+                    &adresse
+                );
+                true
+            } else {
+                log::info!("No more request authorized for {}", adresse);
+                false
+            }
+        } else {
+            true
         }
     }
 
@@ -64,10 +68,11 @@ impl UsageControl for Vec<Client> {
 }
 
 impl UsageControl for Arc<Mutex<Vec<Client>>> {
-    fn increase_usage(&mut self, adresse: &IpAddr) {
+    fn increase_usage(&mut self, adresse: &IpAddr) -> bool {
         let mut requetes_en_cours_lock = self.lock().unwrap();
-        (*requetes_en_cours_lock).increase_usage(adresse);
+        let res = (*requetes_en_cours_lock).increase_usage(adresse);
         drop(requetes_en_cours_lock);
+        res
     }
 
     fn decrease_usage(&mut self, adresse: &IpAddr) {
