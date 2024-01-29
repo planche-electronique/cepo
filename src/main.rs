@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //initialisation des outils cli (confy, log, panic)
     let configuration = confy::load("cepo", None).unwrap_or_else(|err| {
         log::warn!(
-            "Fichier de configuration non trouvé, utilisation de défaut : {}",
+            "Config flie not ofund, using default : {}",
             err
         );
         Configuration::default()
@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     #[cfg(debug_assertions)]
     setup_panic!();
 
-    log::info!("Démarrage...");
+    log::info!("Starting up...");
 
     let date_today = chrono::Local::now().date_naive();
     let current_requests: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
