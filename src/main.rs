@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use brick_ogn::flightlog::update::ObsoleteUpdates;
 use brick_ogn::flightlog::update::Update;
 use brick_ogn::flightlog::FlightLog;
-use serveur::client::{Client, VariationRequete};
+use serveur::client::{Client, UsageControl};
 use serveur::ogn::synchronisation_ogn;
 use serveur::flightlog::Storage;
 use serveur::{data_dir, Context, Configuration};
@@ -113,7 +113,7 @@ async fn connection_handler(
     context
         .current_requests
         .clone()
-        .incrementer(&remote_addr);
+        .increase_usage(&remote_addr);
     let (parts, body) = req.into_parts();
 
     let mut full_path_b = dirs::data_dir().expect(
@@ -281,7 +281,7 @@ async fn connection_handler(
     context
         .current_requests
         .clone()
-        .decrementer(&remote_addr);
+        .decrease_usage(&remote_addr);
 
     // context.requetes_en_cours.clone().decrementer(adresse);
     Ok(response)

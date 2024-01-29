@@ -1,30 +1,29 @@
-//! Stockage et méthodes associées à un client: une machine qui fait des requêtes en cours.
+//! Storage and associated methods of a Client: a machine that is using the service.
 
 use log;
 use std::{net::IpAddr, sync::{Arc, Mutex}};
 
-/// Trait qui permet de changer le nombre de requêtes associées à un [`Client`].
-pub trait VariationRequete {
-    /// Incrémente de 1 le compteur de requêtes en cours d'un [`Client`] et crée si besoin 
-    /// l'entrée pour celui-ci dans [`self`].
-    fn incrementer(&mut self, adresse: &IpAddr);
-    /// Décrémente de 1 le compteur de requêtes en cours d'un [`Client`] et supprime si besoin
-    /// l'entrée de celui-ci dans [`self`].
-    fn decrementer(&mut self, adresse: &IpAddr);
+/// Trait that allows to change the number of active requests a [`Client`] is havingClient`].
+pub trait UsageControl {
+    /// Increase by one the counter of active request of a [`Client`] and create
+    /// if needed the entry for him in [`self`].
+    fn increase_usage(&mut self, adresse: &IpAddr);
+    /// Decrease by one the counter of active request of a [`Client`] and delete
+    /// if needed the entry for him in [`self`].
+    fn decrease_usage(&mut self, adresse: &IpAddr);
 }
 
-/// Structure associée à un client.
+/// Structure of a client.
 #[derive(Clone, PartialEq)]
 pub struct Client {
-    /// L'adresse ip du client.
+    /// Ip address as returned by hyper.
     adresse: IpAddr,
-    /// Le nombre de requêtes que le client a faite et qui sont en cours de traitement.
+    /// The number of requests the client is actually making and are processing.
     requetes_en_cours: i32,
 }
 
-impl VariationRequete for Vec<Client> {
-    fn incrementer(&mut self, adresse: &IpAddr) {
-        //println!("+1 connection : {}", adresse.clone());
+impl UsageControl for Vec<Client> {
+    fn increase_usage(&mut self, adresse: &IpAddr) {
         let mut adresse_existe: bool = false;
         for mut client in self.clone() {
             if client.adresse == *adresse {
@@ -49,7 +48,7 @@ impl VariationRequete for Vec<Client> {
         }
     }
 
-    fn decrementer(&mut self, adresse: &IpAddr) {
+    fn decrease_usage(&mut self, adresse: &IpAddr) {
         for mut client in self.clone() {
             if client.adresse == *adresse {
                 if client.requetes_en_cours != 1 {
@@ -64,16 +63,16 @@ impl VariationRequete for Vec<Client> {
     }
 }
 
-impl VariationRequete for Arc<Mutex<Vec<Client>>> {
-    fn incrementer(&mut self, adresse: &IpAddr) {
+impl UsageControl for Arc<Mutex<Vec<Client>>> {
+    fn increase_usage(&mut self, adresse: &IpAddr) {
         let mut requetes_en_cours_lock = self.lock().unwrap();
-        (*requetes_en_cours_lock).incrementer(adresse);
+        (*requetes_en_cours_lock).increase_usage(adresse);
         drop(requetes_en_cours_lock);
     }
 
-    fn decrementer(&mut self, adresse: &IpAddr) {
+    fn decrease_usage(&mut self, adresse: &IpAddr) {
         let mut requetes_en_cours_lock = self.lock().unwrap();
-        (*requetes_en_cours_lock).decrementer(adresse);
+        (*requetes_en_cours_lock).decrease_usage(adresse);
         drop(requetes_en_cours_lock);
     }
 }
