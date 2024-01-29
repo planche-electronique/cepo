@@ -23,13 +23,13 @@ pub struct Aircraft {
     pub modele: String,
     /// Aircraft category (airplane, glider...) using OGN codes from 
     /// [there](https://gitlab.com/davischappins/ogn-flightbook/-/blob/master/doc/API.md.)
-    pub categorie: u8,
+    pub category: u8,
     /// The string of the immatriculation e(ex: `F-CMOI`).
     pub immatriculation: String,
 }
 
-/// Ajoute un 0 devant le nombre s'il est inférieur à 10 pour avoir des strings à 2 chiffres et à longueur fixe.
-/// # Exemple
+/// Return a  Two char long string of the number.
+/// # Example
 /// ```
 /// use serveur::{nb_2digits_string};
 /// assert_eq!(nb_2digits_string(2), String::from("02"));

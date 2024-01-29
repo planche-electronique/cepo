@@ -48,8 +48,8 @@ pub async fn ogn_flights(date: NaiveDate, airfield_oaci: String) -> Result<Vec<F
         let modele_json = appareil["aircraft"].clone();
         let modele = modele_json.as_str().unwrap_or_default().to_string();
 
-        let categorie_json = appareil["aircraft_type"].clone();
-        let categorie = categorie_json.as_u8().unwrap();
+        let category_json = appareil["aircraft_type"].clone();
+        let category = category_json.as_u8().unwrap();
 
         let immatriculation_json = appareil["registration"].clone();
         let immatriculation = immatriculation_json
@@ -59,7 +59,7 @@ pub async fn ogn_flights(date: NaiveDate, airfield_oaci: String) -> Result<Vec<F
 
         let appareil_actuel = Aircraft {
             modele,
-            categorie,
+            category,
             immatriculation,
         };
         appareils_ogn.push(appareil_actuel);
