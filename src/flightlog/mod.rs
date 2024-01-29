@@ -1,13 +1,13 @@
-//! FlightLog: an object to represent a group of flights and the organization 
+//! FlightLog: an object to represent a group of flights and the organization
 //! on the ground at the moment.
 
 use crate::ogn::ogn_flights;
 use crate::{create_fs_path_day, nb_2digits_string, Context};
 use async_trait::async_trait;
+pub use brick_ogn::flightlog::update::Update;
 use brick_ogn::flightlog::FlightLog;
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use log;
-pub use brick_ogn::flightlog::update::Update;
 use tokio::fs;
 /// A trait that cares about the storage of a FlightLog on a computer.
 #[async_trait]
@@ -48,7 +48,7 @@ impl Storage for FlightLog {
         match flightlog.update_ogn(context).await {
             Ok(_) => {
                 let _ = flightlog.save();
-            },
+            }
             Err(err) => {
                 log::error!("Could not connect to OGN ! : {err}");
             }
@@ -63,12 +63,12 @@ impl Storage for FlightLog {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let date = chrono::Local::now().date_naive();
         // We test equalities and we replace if needed.
-        let last_flights = ogn_flights(date, context.configuration.oaci.clone()).await?;
+        let last_flights_fut = ogn_flights(date, context.configuration.oaci.clone());
         let mut index_next_flight = 0;
         let mut priority_next_flight = 0;
         let old_flightlog = self;
         #[allow(unused_assignments)]
-        for (mut index_new_flight, new_flight) in last_flights.into_iter().enumerate() {
+        for (mut index_new_flight, new_flight) in last_flights_fut.await?.into_iter().enumerate() {
             let mut exists = false;
             for old_flight in &mut old_flightlog.flights {
                 // if on the same flight
@@ -84,9 +84,7 @@ impl Storage for FlightLog {
                     }
                 } else if new_flight.glider == old_flight.glider {
                     if priority_next_flight != 0 {
-                        if priority_next_flight < new_flight.ogn_nb
-                            && new_flight.ogn_nb < 0
-                        {
+                        if priority_next_flight < new_flight.ogn_nb && new_flight.ogn_nb < 0 {
                             exists = true;
                             priority_next_flight = new_flight.ogn_nb;
                             index_next_flight = index_new_flight;
@@ -118,21 +116,13 @@ impl Storage for FlightLog {
         let year = date.year();
         let month = date.month();
         let day = date.day();
-        log::info!(
-            "Loading FlightLog from the disk {}/{}/{}",
-            year,
-            month,
-            day
-        );
+        log::info!("Loading FlightLog from the disk {}/{}/{}", year, month, day);
 
         let month_str = nb_2digits_string(month as i32);
         let day_str = nb_2digits_string(day as i32);
 
         let mut path = crate::data_dir();
-        path.push(format!(
-            "{}/{}/{}.json",
-            year, month_str, day_str
-        ));
+        path.push(format!("{}/{}/{}.json", year, month_str, day_str));
 
         if path.exists() {
             let flightlog_str = fs::read_to_string(path).await.unwrap_or_default();
@@ -141,8 +131,6 @@ impl Storage for FlightLog {
         } else {
             Err("No FlightLog found for the date.".into())
         }
-
-        
     }
 
     async fn save(&self) {
@@ -155,12 +143,11 @@ impl Storage for FlightLog {
         let month_str = nb_2digits_string(month as i32);
 
         let mut file_path = crate::data_dir();
-        file_path.push(format!(
-            "{}/{}/{}.json",
-            year, month_str, day_str
-        ));
+        file_path.push(format!("{}/{}/{}.json", year, month_str, day_str));
 
-        fs::write(&file_path, serde_json::to_string(self).unwrap_or_default()).await.unwrap();
+        fs::write(&file_path, serde_json::to_string(self).unwrap_or_default())
+            .await
+            .unwrap();
 
         log::info!("Saved FlightLog of the {year}/{month_str}/{day_str}.");
     }

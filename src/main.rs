@@ -91,11 +91,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tokio::spawn(async move {
         log::info!("Launching the OGN thread.");
         loop {
-            synchronisation_ogn(&context).await.unwrap();
+            let res = synchronisation_ogn(&context);
             tokio::time::sleep(tokio::time::Duration::from_secs(
                 f_synchronisation_secs_clone,
             ))
             .await; //5 minutes
+            res.await.unwrap();
         }
     });
     let server = Server::bind(&adress)
@@ -128,9 +129,7 @@ async fn connection_handler(
         );
         full_path_b.push(parts.uri.path());
 
-        let corps_str = std::str::from_utf8(&hyper::body::to_bytes(body).await?)
-            .unwrap()
-            .to_string();
+        let corps_str = hyper::body::to_bytes(body);
 
         log::info!(
             "Request of file {} {}",
@@ -224,7 +223,7 @@ async fn connection_handler(
                 // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
                 let mut clean_json = String::new(); //necessite de creer une string qui va contenir
                                                     //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
-                for char in corps_str.chars() {
+                for char in std::str::from_utf8(&corps_str.await?).unwrap().to_string().chars() {
                     if char as u32 != 0 {
                         clean_json.push_str(char.to_string().as_str());
                     }
