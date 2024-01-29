@@ -44,7 +44,7 @@ impl UsageControl for Vec<Client> {
                 );
                 true
             } else {
-                log::info!("No more request authorized for {}", adresse);
+                log::warn!("No more request authorized for {}", adresse);
                 false
             }
         } else {
@@ -53,16 +53,19 @@ impl UsageControl for Vec<Client> {
     }
 
     fn decrease_usage(&mut self, adresse: &IpAddr) {
-        for mut client in self.clone() {
-            if client.adresse == *adresse {
-                if client.requetes_en_cours != 1 {
-                    client.requetes_en_cours -= 1;
-                } else {
-                    let index = self.iter().position(|x| *x == client).unwrap();
-                    self.remove(index);
-                }
-                log::info!("End of request for {}", adresse);
+        let mut i = 0;
+        while i < self.len() && self[i].adresse != *adresse {
+            i += 1;
+        }
+        if i == self.len() {
+
+        } else if self[i].adresse == *adresse {
+            if self[i].requetes_en_cours != 1 {
+                self[i].requetes_en_cours -= 1;
+            } else {
+                self.remove(i);
             }
+            log::info!("End of request for {}", adresse);
         }
     }
 }
