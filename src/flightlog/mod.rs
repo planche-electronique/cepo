@@ -122,10 +122,15 @@ impl Storage for FlightLog {
             year, month_str, day_str
         ));
 
-        let flightlog_str = fs::read_to_string(path).await.unwrap_or_default();
-        let flightlog = serde_json::from_str(&flightlog_str)?;
+        if path.exists() {
+            let flightlog_str = fs::read_to_string(path).await.unwrap_or_default();
+            let flightlog = serde_json::from_str(&flightlog_str)?;
+            Ok(flightlog)
+        } else {
+            Err("No FlightLog found for the date.".into())
+        }
 
-        Ok(flightlog)
+        
     }
 
     async fn save(&self) {

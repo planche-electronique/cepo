@@ -55,8 +55,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             .expect("Could not create data_dir on your platform.");
         log::info!("Create dir for data.");
     }
-
-    let flightlog = FlightLog::load(date_today).await.unwrap_or_default();
+    dbg!(date_today);
+    let flightlog = FlightLog::load(date_today).await.unwrap_or_else(|_| {
+        let mut fl = FlightLog::new();
+        fl.date = date_today;
+        fl
+    });
     let flightlog_arc: Arc<Mutex<FlightLog>> = Arc::new(Mutex::new(flightlog));
 
     let updates_arc: Arc<Mutex<Vec<Update>>> = Arc::new(Mutex::new(Vec::new()));
