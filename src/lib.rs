@@ -31,9 +31,9 @@ pub struct Aircraft {
 /// Ajoute un 0 devant le nombre s'il est inférieur à 10 pour avoir des strings à 2 chiffres et à longueur fixe.
 /// # Exemple
 /// ```
-/// use serveur::nb_2digits_string;
-/// assert_eq!(nom_fichier_date(2), String::from("02"));
-/// assert_eq!(nom_fichier_date(20), String::from("20"));
+/// use serveur::{nb_2digits_string};
+/// assert_eq!(nb_2digits_string(2), String::from("02"));
+/// assert_eq!(nb_2digits_string(20), String::from("20"));
 /// ```
 pub fn nb_2digits_string(nombre: i32) -> String {
     if nombre > 9 {

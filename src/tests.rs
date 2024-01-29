@@ -13,11 +13,7 @@ fn test_vol_from_json() {
     use brick_ogn::flight::Flight;
     use chrono::NaiveTime;
 
-    let json_parse = "{\"numero_ogn\":1,\"aeronef\":\"F-CEAF\",\"decollage\":\"14:14\",\"atterissage\":\"14:19\"}".to_string();
-
-    let vol_du_json = serde_json::from_str(&json_parse).unwrap_or_default();
-
-    let vrai_vol = Flight {
+    let flight = Flight {
         ogn_nb: 1,
         takeoff_code: String::from(""),
         takeoff_machine: String::from(""),
@@ -29,5 +25,8 @@ fn test_vol_from_json() {
         takeoff: NaiveTime::from_hms_opt(14, 14, 0).unwrap(),
         landing: NaiveTime::from_hms_opt(14, 19, 0).unwrap(),
     };
-    assert_eq!(vrai_vol, vol_du_json)
+
+    let flight_json = serde_json::to_string(&flight).unwrap_or_default();
+    let flight_test = serde_json::from_str(&flight_json).unwrap_or_default();
+    assert_eq!(flight, flight_test)
 }
