@@ -157,7 +157,10 @@ async fn connection_handler(
                 let query = parts.uri.query();
                 let date = match query {
                     Some(query_str) => {
-                        NaiveDate::parse_from_str(query_str, "date=%Y/%m/%d").unwrap_or(today)
+                        NaiveDate::parse_from_str(query_str, "date=%Y/%m/%d").unwrap_or_else(|err| {
+                            log::error!("Could not parse request's date ({query_str}) : {err}");
+                            today
+                        })
                     }
                     None => today,
                 };
@@ -171,7 +174,12 @@ async fn connection_handler(
                 } else {
                     *response.body_mut() = Body::from(
                         serde_json::to_string(&FlightLog::from_day(date, &context).await.unwrap())
-                            .unwrap_or_default(),
+                            .unwrap_or_else(|err| {
+                                log::error!("Could not load FlightLog either from disk or network ! : {err}");
+                                let mut fl = FlightLog::default();
+                                fl.date = today;
+                                serde_json::to_string(&fl).unwrap()
+                            }),
                     );
                 }
             }

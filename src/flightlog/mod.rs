@@ -39,8 +39,20 @@ impl Storage for FlightLog {
         let day = date.day();
 
         create_fs_path_day(year, month, day);
-        let mut flightlog = FlightLog::load(date).await.unwrap();
-        flightlog.update_ogn(context).await?;
+        let mut flightlog = FlightLog::load(date).await.unwrap_or_else(|err| {
+            log::warn!("Could not load flightlog from disk, trying to update from OGN : {err}");
+            let mut fl = FlightLog::default();
+            fl.date = date;
+            fl
+        });
+        match flightlog.update_ogn(context).await {
+            Ok(_) => {
+                let _ = flightlog.save();
+            },
+            Err(err) => {
+                log::error!("Could not connect to OGN ! : {err}");
+            }
+        }
         let _ = flightlog.save();
         Ok(flightlog)
     }
