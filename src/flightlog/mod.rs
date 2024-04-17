@@ -61,9 +61,8 @@ impl Storage for FlightLog {
         &mut self,
         context: &Context,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let date = chrono::Local::now().date_naive();
         // We test equalities and we replace if needed.
-        let last_flights_fut = ogn_flights(date, context.configuration.oaci.clone());
+        let last_flights_fut = ogn_flights(self.date, context.configuration.oaci.clone());
         let mut index_next_flight = 0;
         let mut priority_next_flight = 0;
         let old_flightlog = self;
