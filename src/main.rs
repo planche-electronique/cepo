@@ -273,6 +273,17 @@ async fn connection_handler(
                     ACCESS_CONTROL_ALLOW_HEADERS,
                     "origin, content-type".parse().unwrap(),
                 );
+            },
+            (&Method::OPTIONS, "/flightlog") => {
+                log::info!("Serving OPTIONS for flightlog");
+                *response.status_mut() = StatusCode::NO_CONTENT;
+                response
+                    .headers_mut()
+                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+                response.headers_mut().insert(
+                    ACCESS_CONTROL_ALLOW_METHODS,
+                    "OPTIONS, GET".parse().unwrap(),
+                );
             }
             _ => {
                 log::error!(
