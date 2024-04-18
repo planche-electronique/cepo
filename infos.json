@@ -1,28 +1,28 @@
 {
-    "pilotes_tr": [
+    "winch_pilots": [
         "Jone Smith",
         "Jean-Louis Ninet",
         "Steve Jobs"
     ],
 
-    "pilotes_rq": [
+    "tow_pilots": [
         "Jone Smith",
         "Walt Disney",
         "Bob Iger"
     ],
 
-    "treuils": [
+    "winches": [
         "LUCIFER",
         "FREMA"
     ],
 
-    "remorqueurs": [
+    "tow_planes": [
         "F-PVVA",
         "F-JDKK",
         "PU73"
     ],
 
-    "pilotes": [
+    "pilots": [
         "Jone Smith",
         "Steve Jobs",
         "Walt Disney",
@@ -107,12 +107,12 @@
         "D-5434"
     ],
     
-    "CodeDecollage": [
+    "takeoff_codes": [
         "T",
         "R"
     ],
     
-    "CodeVol": [
+    "flight_codes": [
         "B",
         "S",
         "E",
