@@ -1,8 +1,8 @@
 //! Pour gérer les requêtes à OGN.
 
-use crate::flightlog::Storage;
 use crate::flight::Update;
-use crate::{Context, Aircraft};
+use crate::flightlog::Storage;
+use crate::{Aircraft, Context};
 use brick_ogn::flight::Flight;
 use chrono::prelude::*;
 use json::JsonValue;
@@ -10,7 +10,10 @@ use log;
 use std::fs;
 
 /// Retourne les vols récupérés par requête GET à OGN.
-pub async fn ogn_flights(date: NaiveDate, airfield_oaci: String) -> Result<Vec<Flight>, hyper::Error> {
+pub async fn ogn_flights(
+    date: NaiveDate,
+    airfield_oaci: String,
+) -> Result<Vec<Flight>, hyper::Error> {
     log::info!(
         "Requete à http://flightbook.glidernet.org/api/logbook/{}/{}",
         airfield_oaci,
@@ -152,7 +155,7 @@ pub async fn synchronisation_ogn(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let date = chrono::Local::now().date_naive();
     let flights_ogn = ogn_flights(date, context.configuration.oaci.clone()).await?;
-    let flightlog_lock =  context.flightlog.lock().unwrap();
+    let flightlog_lock = context.flightlog.lock().unwrap();
     let mut old_flightlog = (*flightlog_lock).clone();
     drop(flightlog_lock);
     // testing equality and replacing if needed
