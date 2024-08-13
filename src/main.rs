@@ -141,24 +141,14 @@ async fn connection_handler(
 
         match (&parts.method, parts.uri.path()) {
             (&Method::GET, "/flightlog") => {
-                response
-                    .headers_mut()
-                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-                response.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_HEADERS,
-                    "content-type, origin".parse().unwrap(),
-                );
-                response
-                    .headers_mut()
-                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+                add_get_headers(&mut response);
                 let query = parts.uri.query();
                 let date = match query {
-                    Some(query_str) => {
-                        NaiveDate::parse_from_str(query_str, "date=%Y/%m/%d").unwrap_or_else(|err| {
+                    Some(query_str) => NaiveDate::parse_from_str(query_str, "date=%Y/%m/%d")
+                        .unwrap_or_else(|err| {
                             log::error!("Could not parse request's date ({query_str}) : {err}");
                             today
-                        })
-                    }
+                        }),
                     None => today,
                 };
                 if date == today {
@@ -181,16 +171,7 @@ async fn connection_handler(
                 }
             }
             (&Method::GET, "/updates") => {
-                response
-                    .headers_mut()
-                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-                response.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_HEADERS,
-                    "content-type, origin".parse().unwrap(),
-                );
-                response
-                    .headers_mut()
-                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+                add_get_headers(&mut response);
                 let mut updates_lock = context.updates.lock().unwrap();
                 let majs = (*updates_lock).clone();
                 (*updates_lock).remove_obsolete_updates(chrono::Duration::minutes(5));
@@ -198,16 +179,7 @@ async fn connection_handler(
                 *response.body_mut() = Body::from(serde_json::to_string(&majs).unwrap_or_default());
             }
             (&Method::GET, "/infos.json") => {
-                response
-                    .headers_mut()
-                    .insert(CONTENT_TYPE, "application/json".parse().unwrap());
-                response.headers_mut().insert(
-                    ACCESS_CONTROL_ALLOW_HEADERS,
-                    "content-type, origin".parse().unwrap(),
-                );
-                response
-                    .headers_mut()
-                    .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+                add_get_headers(&mut response);
                 let path = data_dir()
                     .as_path()
                     .join(std::path::Path::new("infos.json"));
@@ -221,7 +193,11 @@ async fn connection_handler(
                 // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
                 let mut clean_json = String::new(); //necessite de creer une string qui va contenir
                                                     //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
-                for char in std::str::from_utf8(&corps_str.await?).unwrap().to_string().chars() {
+                for char in std::str::from_utf8(&corps_str.await?)
+                    .unwrap()
+                    .to_string()
+                    .chars()
+                {
                     if char as u32 != 0 {
                         clean_json.push_str(char.to_string().as_str());
                     }
