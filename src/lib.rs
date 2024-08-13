@@ -1,7 +1,7 @@
 #![warn(missing_docs)]
 
 //! Easy and fast usage of OGN data to load and save takeoffs and landing of glider flights.
-//! The program reads under `$XDG_DAT_DIR/cepo/infos.json` to get a list of pilots, 
+//! The program reads under `$XDG_DAT_DIR/cepo/infos.json` to get a list of pilots,
 //! names, immatriculations to look at, takeoff_machines and pilots etc.
 
 use crate::client::Client;
@@ -16,15 +16,15 @@ use hyper::header::*;
 use hyper::{Body, Response};
 
 pub mod client;
-pub mod ogn;
-pub mod flightlog;
 pub mod flight;
+pub mod flightlog;
+pub mod ogn;
 
 /// Aircraft struct, used to parse OGN API.
 pub struct Aircraft {
     /// The type of the aircraft, coming from OGN.
     pub modele: String,
-    /// Aircraft category (airplane, glider...) using OGN codes from 
+    /// Aircraft category (airplane, glider...) using OGN codes from
     /// [there](https://gitlab.com/davischappins/ogn-flightbook/-/blob/master/doc/API.md.)
     pub category: u8,
     /// The string of the immatriculation e(ex: `F-CMOI`).
@@ -64,7 +64,7 @@ pub fn create_fs_path_day(annee: i32, mois: u32, jour: u32) {
 }
 
 /// Allows to store and share configuration of the server. Loaded thanks to
-/// [confy](https://crates.io/crates/confy). Default value is written if there 
+/// [confy](https://crates.io/crates/confy). Default value is written if there
 /// is no config file.
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Configuration {
@@ -90,7 +90,7 @@ impl Default for Configuration {
     }
 }
 
-/// Server context. Stores configuration, current requests, updates made in the 
+/// Server context. Stores configuration, current requests, updates made in the
 /// after the last OGN request and the FlightLog of the day.
 #[derive(Clone)]
 pub struct Context {
@@ -99,10 +99,10 @@ pub struct Context {
     /// The day flightlog.
     pub flightlog: Arc<Mutex<FlightLog>>,
     /// An vector of Update to keep in memory the updates that were recently made
-    /// (after the last OGN automatic request) to avoid to reload the entire 
+    /// (after the last OGN automatic request) to avoid to reload the entire
     /// flightlog.
     pub updates: Arc<Mutex<Vec<Update>>>,
-    /// A vector that stores who is actually requesting, to limit the number of 
+    /// A vector that stores who is actually requesting, to limit the number of
     /// concurrent request of the same user. (Some sort of ddos protection).
     pub current_requests: Arc<Mutex<Vec<Client>>>,
 }
