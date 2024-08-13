@@ -7,10 +7,11 @@ use brick_ogn::flightlog::FlightLog;
 use serveur::client::{Client, UsageControl};
 use serveur::flightlog::Storage;
 use serveur::ogn::synchronisation_ogn;
-use serveur::{data_dir, Configuration, Context};
+use serveur::{add_get_headers, data_dir, Configuration, Context};
 
 use chrono::NaiveDate;
 
+#[cfg(not(debug_assertions))]
 use human_panic::setup_panic;
 
 //hyper utils
@@ -27,10 +28,7 @@ use hyper::{Method, StatusCode};
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //initialisation des outils cli (confy, log, panic)
     let configuration = confy::load("cepo", None).unwrap_or_else(|err| {
-        log::warn!(
-            "Config flie not ofund, using default : {}",
-            err
-        );
+        log::warn!("Config flie not ofund, using default : {}", err);
         Configuration::default()
     });
     confy::store("cepo", None, configuration.clone())?;
