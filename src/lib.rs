@@ -12,6 +12,9 @@ use std::sync::{Arc, Mutex};
 use brick_ogn::flightlog::update::Update;
 use brick_ogn::flightlog::FlightLog;
 
+use hyper::header::*;
+use hyper::{Body, Response};
+
 pub mod client;
 pub mod ogn;
 pub mod flightlog;
@@ -113,4 +116,18 @@ pub fn data_dir() -> std::path::PathBuf {
     );
     data_dir.push("cepo");
     data_dir
+}
+
+/// Add common headers to a get Response
+pub fn add_get_headers(response: &mut Response<Body>) {
+    response
+        .headers_mut()
+        .insert(CONTENT_TYPE, "application/json".parse().unwrap());
+    response.headers_mut().insert(
+        ACCESS_CONTROL_ALLOW_HEADERS,
+        "content-type, origin".parse().unwrap(),
+    );
+    response
+        .headers_mut()
+        .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
 }
