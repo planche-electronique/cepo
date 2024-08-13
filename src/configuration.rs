@@ -1,7 +1,4 @@
 use chrono::NaiveDate;
-use tokio::fs;
-
-use crate::data_dir;
 
 /// An enum about when to monitor an airspace for flights
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
