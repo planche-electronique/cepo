@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     )
     .init();
 
-    #[cfg(debug_assertions)]
+    #[cfg(not(debug_assertions))]
     setup_panic!();
 
     log::info!("Starting up...");
