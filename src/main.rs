@@ -169,7 +169,7 @@ async fn connection_handler(
                             }),
                     );
                 }
-            }
+            },
             (&Method::GET, "/updates") => {
                 add_get_headers(&mut response);
                 let mut updates_lock = context.updates.lock().unwrap();
@@ -177,7 +177,7 @@ async fn connection_handler(
                 (*updates_lock).remove_obsolete_updates(chrono::Duration::minutes(5));
                 drop(updates_lock);
                 *response.body_mut() = Body::from(serde_json::to_string(&majs).unwrap_or_default());
-            }
+            },
             (&Method::GET, "/infos.json") => {
                 add_get_headers(&mut response);
                 let path = data_dir()
@@ -188,7 +188,7 @@ async fn connection_handler(
                     *response.status_mut() = hyper::StatusCode::NOT_FOUND;
                     "{}".to_string()
                 }));
-            }
+            },
             (&Method::POST, "/majs") => {
                 // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
                 let mut clean_json = String::new(); //necessite de creer une string qui va contenir
@@ -226,7 +226,7 @@ async fn connection_handler(
                 response
                     .headers_mut()
                     .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
-            }
+            },
             (&Method::OPTIONS, "/majs") => {
                 // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
                 *response.status_mut() = StatusCode::NO_CONTENT;
@@ -258,7 +258,7 @@ async fn connection_handler(
                     ACCESS_CONTROL_ALLOW_METHODS,
                     "OPTIONS, GET".parse().unwrap(),
                 );
-            }
+            },
             _ => {
                 log::error!(
                     "Method or path not available : {:?}; {:?}; {:?}",
