@@ -154,16 +154,18 @@ pub async fn synchronisation_ogn(
     context: &Context,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let date = chrono::Local::now().date_naive();
-    let flights_ogn = ogn_flights(date, context.configuration.oaci.clone()).await?;
-    let flightlog_lock = context.flightlog.lock().unwrap();
+    for (oaci, flightlog_arc) in &context.flightlogs {
+        let flights_ogn = ogn_flights(date, oaci.clone()).await?;
+        let flightlog_lock = flightlog_arc.lock().unwrap();
     let mut old_flightlog = (*flightlog_lock).clone();
     drop(flightlog_lock);
     // testing equality and replacing if needed
     old_flightlog.flights.update(flights_ogn);
 
-    let mut flightlog_lock = context.flightlog.lock().unwrap();
+        let mut flightlog_lock = flightlog_arc.lock().unwrap();
     *flightlog_lock = old_flightlog.clone();
     drop(flightlog_lock);
-    let _ = old_flightlog.save();
-    Ok(())
+        let _ = old_flightlog.save(&oaci);
+    }
+    return Ok(());
 }
