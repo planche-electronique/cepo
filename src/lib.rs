@@ -121,7 +121,14 @@ impl Context {
             updates: updates_arc,
             current_requests,
         };
-        let context_svc = context.clone();
+    }
+    /// The main server function that is launched after the parsing of the
+    /// configuration.
+    pub async fn server(&self) -> Result<(), hyper::Error> {
+        log::info!("Starting up...");
+        let address = SocketAddr::from(([0, 0, 0, 0], self.configuration.port as u16));
+
+        let context_svc = self.clone();
         let service = make_service_fn(|conn: &AddrStream| {
             let context_clone = context_svc.clone();
             let remote_addr = conn.remote_addr().ip().clone();
@@ -133,17 +140,18 @@ impl Context {
                 }))
             }
         });
-        let f_synchronisation_secs_clone = context
+        let f_synchronisation_secs_clone = self
             .clone()
             .configuration
             .clone()
             .f_synchronisation_secs
             .clone() as u64;
         //on spawn le thread qui va s'occuper de ogn
+        let thread_config = self.clone();
         tokio::spawn(async move {
             log::info!("Launching the OGN thread.");
             loop {
-                let res = synchronisation_ogn(&context);
+                let res = synchronisation_ogn(&thread_config);
                 tokio::time::sleep(tokio::time::Duration::from_secs(
                     f_synchronisation_secs_clone,
                 ))
@@ -151,7 +159,7 @@ impl Context {
                 res.await.unwrap();
             }
         });
-        let server = Server::bind(&adress)
+        let server = Server::bind(&address)
             .serve(service)
             .with_graceful_shutdown(signal_extinction());
         log::info!("Server started.");
