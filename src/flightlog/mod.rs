@@ -2,7 +2,7 @@
 //! on the ground at the moment.
 
 use crate::ogn::ogn_flights;
-use crate::{create_fs_path_day, nb_2digits_string, Context};
+use crate::{create_fs_path_day, nb_2digits_string};
 use async_trait::async_trait;
 pub use brick_ogn::flightlog::update::Update;
 use brick_ogn::flightlog::FlightLog;
@@ -15,54 +15,58 @@ pub trait Storage {
     /// FlightLog from the disk and updated from ogn.
     async fn from_day(
         date: NaiveDate,
-        context: &Context,
+        oaci: &String,
     ) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>>;
     /// Updating the flightlog from ogn.
     async fn update_ogn(
         &mut self,
-        context: &Context,
+        oaci: &String,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
     /// Loading FlightLog from the disk only, without updating.
-    async fn load(date: NaiveDate) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>>;
+    async fn load(
+        date: NaiveDate,
+        oaci: &String,
+    ) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>>;
     /// Savinfg on the disk only, wuthout updating/
-    async fn save(&self);
+    async fn save(&self, oaci: &String);
 }
 
 #[async_trait]
 impl Storage for FlightLog {
+    /// Loads the flightlog from local files and updates it from the internet if needed
     async fn from_day(
         date: NaiveDate,
-        context: &Context,
+        oaci: &String,
     ) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>> {
         let year: i32 = date.year();
         let month = date.month();
         let day = date.day();
 
         create_fs_path_day(year, month, day);
-        let mut flightlog = FlightLog::load(date).await.unwrap_or_else(|err| {
+        let mut flightlog = FlightLog::load(date, oaci).await.unwrap_or_else(|err| {
             log::warn!("Could not load flightlog from disk, trying to update from OGN : {err}");
             let mut fl = FlightLog::default();
             fl.date = date;
             fl
         });
-        match flightlog.update_ogn(context).await {
+        match flightlog.update_ogn(oaci).await {
             Ok(_) => {
-                let _ = flightlog.save();
+                let _ = flightlog.save(oaci);
             }
             Err(err) => {
                 log::error!("Could not connect to OGN ! : {err}");
             }
         }
-        let _ = flightlog.save();
+        let _ = flightlog.save(oaci);
         Ok(flightlog)
     }
 
     async fn update_ogn(
         &mut self,
-        context: &Context,
+        oaci: &String,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // We test equalities and we replace if needed.
-        let last_flights_fut = ogn_flights(self.date, context.configuration.oaci.clone());
+        let last_flights_fut = ogn_flights(self.date, oaci.to_string());
         let mut index_next_flight = 0;
         let mut priority_next_flight = 0;
         let old_flightlog = self;
@@ -111,17 +115,27 @@ impl Storage for FlightLog {
         Ok(())
     }
 
-    async fn load(date: NaiveDate) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>> {
+    /// Returns the flightlog from day and airfield that matches `oaci` from local files
+    async fn load(
+        date: NaiveDate,
+        oaci: &String,
+    ) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>> {
         let year = date.year();
         let month = date.month();
         let day = date.day();
-        log::info!("Loading FlightLog from the disk {}/{}/{}", year, month, day);
+        log::info!(
+            "Loading FlightLog at {} from the disk {}/{}/{}",
+            oaci,
+            year,
+            month,
+            day
+        );
 
         let month_str = nb_2digits_string(month as i32);
         let day_str = nb_2digits_string(day as i32);
 
         let mut path = crate::data_dir();
-        path.push(format!("{}/{}/{}.json", year, month_str, day_str));
+        path.push(format!("{}/{}/{}/{}.json", year, month_str, day_str, oaci));
 
         if path.exists() {
             let flightlog_str = fs::read_to_string(path).await.unwrap_or_default();
@@ -132,7 +146,7 @@ impl Storage for FlightLog {
         }
     }
 
-    async fn save(&self) {
+    async fn save(&self, oaci: &String) {
         let date = self.date;
         let year = date.year();
         let month = date.month();
@@ -142,7 +156,7 @@ impl Storage for FlightLog {
         let month_str = nb_2digits_string(month as i32);
 
         let mut file_path = crate::data_dir();
-        file_path.push(format!("{}/{}/{}.json", year, month_str, day_str));
+        file_path.push(format!("{}/{}/{}/{}.json", year, month_str, day_str, oaci));
 
         fs::write(&file_path, serde_json::to_string(self).unwrap_or_default())
             .await
