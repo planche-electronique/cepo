@@ -14,7 +14,7 @@ impl Default for DayMonitor {
 }
 
 /// A struct storing an airport
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, PartialEq)]
 pub struct AirportConfiguration {
     /// The OACI code of the airport
     oaci: String,
@@ -51,7 +51,7 @@ impl Default for AirportConfiguration {
 /// Allows to store and share configuration of the server. Loaded thanks to
 /// [confy](https://crates.io/crates/confy). Default value is written if there
 /// is no config file.
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, PartialEq)]
 pub struct Configuration {
     /// configuration of all airports to look at
     pub airfileds_configs: Vec<AirportConfiguration>,

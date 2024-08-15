@@ -1,4 +1,7 @@
-use serveur::{data_dir, Configuration};
+use serveur::{
+    configuration::{copy_example_configuration_file, Configuration},
+    data_dir, Context,
+};
 
 #[cfg(not(debug_assertions))]
 use human_panic::setup_panic;
@@ -8,27 +11,41 @@ use std::io::IsTerminal;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //initialisation des outils cli (confy, log, panic)
-    let configuration = confy::load("cepo", None).unwrap_or_else(|err| {
+    #[cfg(not(debug_assertions))]
+    setup_panic!();
+
+    let mut configuration = confy::load("cepo", None).unwrap_or_else(|err| {
         log::error!(
-            "Config file not found : {} \nFor information the file should be located at {:?}",
+            "Error while loading configuration : {} \nFor information the file should be located at {:?}",
             err,
             data_dir()
         );
+        Configuration::default()
+    });
+    if configuration == Configuration::default() {
         if std::io::stdout().is_terminal() {
-            let answer = inquire::Confirm::new("Do you want to write default configuration file ?")
+            let answer =
+                inquire::Confirm::new("Do you want to write and use example configuration file ?")
                 .with_default(true)
                 .prompt();
             match answer {
                 Ok(true) => {
-                    copy_example_configuration_file();
+                    log::info!("Writing example configuration file");
+                    log::info!("Using example configuration file");
+                    copy_example_configuration_file().unwrap();
+                    configuration = Configuration::example();
                 }
-                Err(_) => println!("Error with questionnaire, try again later"),
+                Err(_) => {
+                    log::error!("Error with questionnaire, try again later");
+                    panic!();
+                }
                 _ => (),
             }
+        } else {
+            panic!(); //should return a more sexy error
         }
-        Configuration::default()
-    });
-    confy::store("cepo", None, configuration.clone())?;
+    }
+    //confy::store("cepo", None, configuration.clone())?;
     env_logger::Builder::from_env(
         env_logger::Env::default().default_filter_or(configuration.niveau_log.clone()),
     )
