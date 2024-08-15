@@ -26,8 +26,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if std::io::stdout().is_terminal() {
             let answer =
                 inquire::Confirm::new("Do you want to write and use example configuration file ?")
-                .with_default(true)
-                .prompt();
+                    .with_default(true)
+                    .prompt();
             match answer {
                 Ok(true) => {
                     log::info!("Writing example configuration file");

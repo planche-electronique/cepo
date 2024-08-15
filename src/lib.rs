@@ -8,7 +8,6 @@ use crate::client::Client;
 use configuration::Configuration;
 use std::collections::HashMap;
 use std::fs;
-
 use std::sync::{Arc, Mutex};
 
 use brick_ogn::flightlog::update::Update;
