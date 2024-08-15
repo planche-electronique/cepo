@@ -169,6 +169,19 @@ impl Context {
     }
 }
 
+/// Handles the parameters for a flightlog get request
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+struct GetFlightLogsQueryParameters {
+    date: NaiveDate,
+    oaci: String,
+}
+
+/// Handles the parameters for a updates post request
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+struct PostUpdateQueryParameters {
+    oaci: String,
+}
+
 /// Main connexion handler for hyper server
 async fn connection_handler(
     req: Request<Body>,
@@ -206,16 +219,10 @@ async fn connection_handler(
         match (&parts.method, parts.uri.path()) {
             (&Method::GET, "/flightlog") => {
                 add_get_headers(&mut response);
-                let query = parts.uri.query();
-                let date = match query {
-                    Some(query_str) => NaiveDate::parse_from_str(query_str, "date=%Y/%m/%d")
-                        .unwrap_or_else(|err| {
-                            log::error!("Could not parse request's date ({query_str}) : {err}");
-                            today
-                        }),
-                    None => today,
-                };
-                if date == today {
+                let query = parts.uri.query().unwrap();
+                let query_parameters: GetFlightLogsQueryParameters =
+                    serde_qs::from_str(query).unwrap();
+                if query_parameters.date == today {
                     //on recupere la liste de planche
                     let flightlog_lock = context.flightlog.lock().unwrap();
                     let clone_planche = (*flightlog_lock).clone();
@@ -224,9 +231,15 @@ async fn connection_handler(
                         Body::from(serde_json::to_string(&clone_planche).unwrap_or_default());
                 } else {
                     *response.body_mut() = Body::from(
-                        serde_json::to_string(&FlightLog::from_day(date, &context).await.unwrap())
+                        serde_json::to_string(
+                            &FlightLog::from_day(query_parameters.date, &query_parameters.oaci)
+                                .await
+                                .unwrap(),
+                        )
                             .unwrap_or_else(|err| {
-                                log::error!("Could not load FlightLog either from disk or network ! : {err}");
+                            log::error!(
+                                "Could not load FlightLog either from disk or network ! : {err}"
+                            );
                                 let mut fl = FlightLog::default();
                                 fl.date = today;
                                 serde_json::to_string(&fl).unwrap()
@@ -253,7 +266,10 @@ async fn connection_handler(
                     "{}".to_string()
                 }));
             }
-            (&Method::POST, "/majs") => {
+            (&Method::POST, "/updates") => {
+                let query = parts.uri.query().unwrap();
+                let query_parameters: PostUpdateQueryParameters =
+                    serde_qs::from_str(query).unwrap();
                 // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
                 let mut clean_json = String::new(); //necessite de creer une string qui va contenir
                                                     //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
@@ -275,13 +291,15 @@ async fn connection_handler(
                 }
 
                 if update.date != today {
-                    let mut wanted_flightlog = FlightLog::from_day(update.date, &context).await?;
+                    let mut wanted_flightlog =
+                        FlightLog::from_day(update.date, &query_parameters.oaci).await?;
                     wanted_flightlog.update(update);
-                    wanted_flightlog.save().await;
+                    wanted_flightlog.save(&query_parameters.oaci).await;
                 } else {
-                    let mut flightlog_lock = context.flightlog.lock().unwrap();
+                    let mut flightlog_lock =
+                        context.flightlogs[&query_parameters.oaci].lock().unwrap();
                     (*flightlog_lock).update(update);
-                    let _ = (*flightlog_lock).save();
+                    let _ = (*flightlog_lock).save(&query_parameters.oaci);
                     drop(flightlog_lock);
                 }
                 response
