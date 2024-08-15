@@ -102,33 +102,22 @@ pub struct Context {
 }
 
 impl Context {
-    /// The main server function that is launched after the parsing of the
-    /// configuration.
-    pub async fn server(&self) -> Result<(), hyper::Error> {
-        log::info!("Starting up...");
-
-        let date_today = chrono::Local::now().date_naive();
+    /// Context constructor
+    pub async fn new(configuration: Configuration) -> Self {
         let current_requests: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
         //let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
-        let adress = SocketAddr::from(([0, 0, 0, 0], self.configuration.clone().port as u16));
         // creation du dossier de travail si besoin
         if !(crate::data_dir().as_path().exists()) {
             fs::create_dir_all(data_dir().as_path())
                 .expect("Could not create data_dir on your platform.");
             log::info!("Create dir for data.");
         }
-        dbg!(date_today);
-        let flightlog = FlightLog::load(date_today).await.unwrap_or_else(|_| {
-            let mut fl = FlightLog::new();
-            fl.date = date_today;
-            fl
-        });
-        let flightlog_arc: Arc<Mutex<FlightLog>> = Arc::new(Mutex::new(flightlog));
+        let flightlogs = (&configuration).create_needed_flightlog_hashmap();
 
         let updates_arc: Arc<Mutex<Vec<Update>>> = Arc::new(Mutex::new(Vec::new()));
-        let context: Context = Context {
-            configuration: self.configuration.clone(),
-            flightlog: flightlog_arc,
+        return Self {
+            configuration: configuration.clone(),
+            flightlogs: flightlogs.await,
             updates: updates_arc,
             current_requests,
         };
