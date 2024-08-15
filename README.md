@@ -13,3 +13,9 @@ Il faut copier le fichier `infos.json` dans $XDG_DATA_HOME/cepo
 ## Crédits
 Merci à OGN pour la récupération des données de vol et leur [API](https://gitlab.com/davischappins/ogn-flightbook/-/blob/master/doc/API.md).
 Non affilié à la rust foundation.
+
+## TO-DO
+- before you could get "infos.json", now we should be able to send airport +
+global infos on request
+- refactor code to make it prettier (like the big `connection_handler` function)
+- feature: each `always` set airport should have its own thread
