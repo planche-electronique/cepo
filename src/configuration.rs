@@ -1,9 +1,23 @@
+//! Configuration for the server.
+//! You can monitor different airfields. For each of them, you can configure
+//! lists of pilots, tow pilots, winch pilots, winches and aerotows.
+//! You can specify if the airport is monitored at all time (like you would for
+//! a main airport) or some days (like you would for an airport you go in stage
+//! someday a year).
+//! You can specify these lists of pilots etc. globally.
+
+use crate::flightlog::Storage;
+use brick_ogn::flightlog::FlightLog;
 use chrono::NaiveDate;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// An enum about when to monitor an airspace for flights
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, PartialEq)]
 pub enum DayMonitor {
+    /// Monitor the airport every day
     Always,
+    /// Monitor the airport only in specified days in the `Vec<NaiveDate>`
     Days(Vec<NaiveDate>),
 }
 
@@ -91,7 +105,8 @@ impl Default for Configuration {
 }
 
 impl Configuration {
-    fn example() -> Self {
+    /// Example configuration file
+    pub fn example() -> Self {
         Self {
             airfileds_configs: vec![
                 AirportConfiguration {
