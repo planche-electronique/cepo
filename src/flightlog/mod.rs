@@ -61,6 +61,7 @@ impl Storage for FlightLog {
         Ok(flightlog)
     }
 
+    /// Update the flightlog from ogn
     async fn update_ogn(
         &mut self,
         oaci: &String,
