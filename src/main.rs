@@ -51,10 +51,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     )
     .init();
 
-    #[cfg(not(debug_assertions))]
-    setup_panic!();
+    let context = Context::new(configuration).await;
+    context.server().await?;
 
-    Ok(())
+    return Ok(());
 }
 
 mod tests;
