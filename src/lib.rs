@@ -5,6 +5,8 @@
 //! names, immatriculations to look at, takeoff_machines and pilots etc.
 
 use crate::client::Client;
+use configuration::Configuration;
+use std::collections::HashMap;
 use std::fs;
 
 use std::sync::{Arc, Mutex};
@@ -88,8 +90,8 @@ pub fn create_fs_path_day(annee: i32, mois: u32, jour: u32) {
 pub struct Context {
     /// Server config.
     pub configuration: Configuration,
-    /// The day flightlog.
-    pub flightlog: Arc<Mutex<FlightLog>>,
+    /// The  flightlogs of the day.
+    pub flightlogs: HashMap<String, Arc<Mutex<FlightLog>>>,
     /// An vector of Update to keep in memory the updates that were recently made
     /// (after the last OGN automatic request) to avoid to reload the entire
     /// flightlog.

@@ -128,8 +128,27 @@ impl Configuration {
             permanent_winch_pilots: vec![String::from("Steve Jobs"), String::from("Jony Ive")],
         }
     }
+
+    /// Returns a HashMap containing flightlogs associated with their oaci code in String
+    pub async fn create_needed_flightlog_hashmap(&self) -> HashMap<String, Arc<Mutex<FlightLog>>> {
+        let mut hm = HashMap::new();
+        for airport_config in &self.airfileds_configs {
+            let date_today = chrono::Local::now().date_naive();
+            let flightlog = FlightLog::load(date_today, &airport_config.oaci)
+                .await
+                .unwrap_or_else(|_| {
+                    let mut fl = FlightLog::new();
+                    fl.date = date_today;
+                    fl
+                });
+            let flightlog_arc: Arc<Mutex<FlightLog>> = Arc::new(Mutex::new(flightlog));
+            hm.insert(airport_config.oaci.clone(), flightlog_arc);
+        }
+        return hm;
+    }
 }
 
+/// Copies an example configuration file instead of the actual config
 pub fn copy_example_configuration_file() -> Result<(), confy::ConfyError> {
     let example = Configuration::example();
     confy::store("cepo", None, example)?;
