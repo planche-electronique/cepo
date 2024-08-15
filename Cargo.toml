@@ -6,7 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dirs = "5.0.1"
 async-trait = "0.1.72"
+confy = { version = "0.5.1", features = ["ron_conf"], default-features = false }
 chrono = "0.4.24"
 confy = "0.5.1"
 dirs = "5.0.1"
