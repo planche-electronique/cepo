@@ -223,7 +223,7 @@ async fn connection_handler(
                     serde_qs::from_str(query).unwrap();
                 if query_parameters.date == today {
                     //on recupere la liste de planche
-                    let flightlog_lock = context.flightlog.lock().unwrap();
+                    let flightlog_lock = context.flightlogs[&query_parameters.oaci].lock().unwrap();
                     let clone_planche = (*flightlog_lock).clone();
                     drop(flightlog_lock);
                     *response.body_mut() =
@@ -235,14 +235,14 @@ async fn connection_handler(
                                 .await
                                 .unwrap(),
                         )
-                            .unwrap_or_else(|err| {
+                        .unwrap_or_else(|err| {
                             log::error!(
                                 "Could not load FlightLog either from disk or network ! : {err}"
                             );
-                                let mut fl = FlightLog::default();
-                                fl.date = today;
-                                serde_json::to_string(&fl).unwrap()
-                            }),
+                            let mut fl = FlightLog::default();
+                            fl.date = today;
+                            serde_json::to_string(&fl).unwrap()
+                        }),
                     );
                 }
             }
