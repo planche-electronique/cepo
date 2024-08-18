@@ -290,7 +290,23 @@ async fn connection_handler(
                         panic!();
                     });
                 let infos = context.configuration.infos(&query_parameters.oaci);
-                *response.body_mut() = Body::from(serde_json::to_string(&infos).unwrap());
+                let body = serde_json::to_string(&infos);
+                match body {
+                    Ok(txt) => {
+                        log::info!("Sending infos about {}", query_parameters.oaci);
+                        *response.body_mut() = Body::from(txt);
+                    }
+                    Err(_) => {
+                        let err_msg = format!(
+                            "Could not find informations about {}. \
+                        Please check if the server is configured for this \
+                        airport and if you used the correct syntax.",
+                            query_parameters.oaci
+                        );
+                        log::warn!("{}", err_msg);
+                        *response.body_mut() = Body::from(err_msg);
+                    }
+                }
             }
             (&Method::POST, "/updates") => {
                 let query = parts.uri.query().unwrap();
