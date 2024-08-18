@@ -76,6 +76,11 @@ impl AirportConfiguration {
     pub fn day_monitor(&self) -> DayMonitor {
         return self.day_monitor.clone();
     }
+
+    /// Returns the immatriculations of an airport
+    pub fn immatriculations(&self) -> Vec<String> {
+        return self.immatriculations.clone();
+    }
 }
 
 /// Allows to store and share configuration of the server. Loaded thanks to
