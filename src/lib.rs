@@ -226,8 +226,15 @@ async fn connection_handler(
             (&Method::GET, "/flightlog") => {
                 add_get_headers(&mut response);
                 let query = parts.uri.query().unwrap();
-                let query_parameters: GetFlightLogsQueryParameters =
-                    serde_qs::from_str(query).unwrap();
+                let query_parameters: GetFlightLogsQueryParameters = serde_qs::from_str(query)
+                    .unwrap_or_else(|err| {
+                        log::error!("Error while deserializing query objects: {err}");
+                        context
+                            .current_requests
+                            .clone()
+                            .decrease_usage(&remote_addr);
+                        panic!();
+                    });
                 if query_parameters.date == today {
                     //on recupere la liste de planche
                     let flightlog_lock = context.flightlogs[&query_parameters.oaci].lock().unwrap();
@@ -410,4 +417,20 @@ pub fn add_get_headers(response: &mut Response<Body>) {
     response
         .headers_mut()
         .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::GetFlightLogsQueryParameters;
+    use chrono::NaiveDate;
+
+    #[test]
+    fn get_flightlogs_query_parameters_deser() {
+        let query = "date=2020-10-09&oaci=LFLE";
+        let str: GetFlightLogsQueryParameters = GetFlightLogsQueryParameters {
+            date: NaiveDate::from_ymd_opt(2020, 10, 9).unwrap(),
+            oaci: String::from("LFLE"),
+        };
+        assert_eq!(str, serde_qs::from_str(query).unwrap())
+    }
 }

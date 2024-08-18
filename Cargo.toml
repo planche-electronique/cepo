@@ -9,7 +9,7 @@ edition = "2021"
 dirs = "5.0.1"
 async-trait = "0.1.72"
 confy = { version = "0.5.1", features = ["ron_conf"], default-features = false }
-chrono = "0.4.24"
+chrono = { version = "0.4.24", features = ["serde"] }
 env_logger = "0.10.0"
 human-panic = "1.1.5"
 hyper = { version = "0.14", features = ["full"] }
