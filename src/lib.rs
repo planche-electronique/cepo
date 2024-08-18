@@ -245,9 +245,13 @@ async fn connection_handler(
                 } else {
                     *response.body_mut() = Body::from(
                         serde_json::to_string(
-                            &FlightLog::from_day(query_parameters.date, &query_parameters.oaci)
-                                .await
-                                .unwrap(),
+                            &FlightLog::from_day(
+                                query_parameters.date,
+                                &query_parameters.oaci,
+                                &context,
+                            )
+                            .await
+                            .unwrap(),
                         )
                         .unwrap_or_else(|err| {
                             log::error!(
@@ -305,7 +309,7 @@ async fn connection_handler(
 
                 if update.date != today {
                     let mut wanted_flightlog =
-                        FlightLog::from_day(update.date, &query_parameters.oaci).await?;
+                        FlightLog::from_day(update.date, &query_parameters.oaci, &context).await?;
                     wanted_flightlog.update(update);
                     wanted_flightlog.save(&query_parameters.oaci).await;
                 } else {
