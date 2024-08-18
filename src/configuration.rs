@@ -108,7 +108,7 @@ pub struct Configuration {
     /// A vector of aerotows that you want to be in any flightlog.
     pub permanent_aerotows: Vec<String>,
     /// The immatriculations  we always log regardless of the airport
-    pub immatriculations: Vec<String>,
+    pub permanent_immatriculations: Vec<String>,
 }
 
 impl Default for Configuration {
@@ -123,7 +123,7 @@ impl Default for Configuration {
             permanent_aerotows: Vec::new(),
             permanent_tow_pilots: Vec::new(),
             permanent_winch_pilots: Vec::new(),
-            immatriculations: Vec::new(),
+            permanent_immatriculations: Vec::new(),
         }
     }
 }
@@ -179,7 +179,7 @@ impl Configuration {
             permanent_tow_pilots: vec![String::from("Steve Jobs"), String::from("Jony Ive")],
             permanent_aerotows: vec![String::from("cyan"), String::from("clear green")],
             permanent_winch_pilots: vec![String::from("Steve Jobs"), String::from("Jony Ive")],
-            immatriculations: vec![
+            permanent_immatriculations: vec![
                 String::from("F-CVIP"),
                 String::from("F-CNON"),
                 String::from("F-CLMT"),
@@ -217,7 +217,7 @@ impl Configuration {
 
     /// Returns a vector of the global immatriculations and the ones for the airport
     pub fn immatriculation_ap(&mut self, oaci: &String) -> Vec<String> {
-        let mut immatriculations = self.immatriculations.clone();
+        let mut immatriculations = self.permanent_immatriculations.clone();
         immatriculations.append(&mut self.airport_configuration(oaci).unwrap().immatriculations());
         return immatriculations;
     }
@@ -230,7 +230,7 @@ impl Configuration {
             aerotows: self.permanent_aerotows,
             winches: self.permanent_winches,
             day_monitor: DayMonitor::Always,
-            immatriculations: self.immatriculations,
+            immatriculations: self.permanent_immatriculations,
             pilots: self.permanent_pilots,
             tow_pilots: self.permanent_tow_pilots,
             winch_pilots: self.permanent_winch_pilots,
