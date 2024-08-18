@@ -17,7 +17,7 @@ pub trait Storage {
         date: NaiveDate,
         oaci: &String,
     ) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>>;
-    /// Updating the flightlog from ogn.
+    /// Updating the flightlog from ogn using today's date.
     async fn update_ogn(
         &mut self,
         oaci: &String,
@@ -61,7 +61,7 @@ impl Storage for FlightLog {
         Ok(flightlog)
     }
 
-    /// Update the flightlog from ogn
+    /// Updating the flightlog from ogn using today's date.
     async fn update_ogn(
         &mut self,
         oaci: &String,

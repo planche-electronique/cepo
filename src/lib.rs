@@ -5,7 +5,8 @@
 //! names, immatriculations to look at, takeoff_machines and pilots etc.
 
 use crate::client::Client;
-use configuration::Configuration;
+use configuration::{Configuration, DayMonitor};
+use ogn::synchronisation_ogn;
 use std::collections::HashMap;
 use std::fs;
 use std::sync::{Arc, Mutex};
@@ -24,7 +25,6 @@ pub mod flightlog;
 pub mod ogn;
 
 use crate::client::UsageControl;
-use crate::ogn::synchronisation_ogn;
 use brick_ogn::flightlog::update::ObsoleteUpdates;
 
 use chrono::NaiveDate;
@@ -146,18 +146,25 @@ impl Context {
             .f_synchronisation_secs
             .clone() as u64;
         //on spawn le thread qui va s'occuper de ogn
-        let thread_config = self.clone();
-        tokio::spawn(async move {
-            log::info!("Launching the OGN thread.");
-            loop {
-                let res = synchronisation_ogn(&thread_config);
-                tokio::time::sleep(tokio::time::Duration::from_secs(
-                    f_synchronisation_secs_clone,
-                ))
-                .await; //5 minutes
-                res.await.unwrap();
+        for ap in &self.configuration.airfileds_configs {
+            if ap.day_monitor() == DayMonitor::Always {
+                let oaci = ap.oaci();
+                let flightlog_arc = self.flightlogs[&oaci].clone();
+                tokio::spawn(async move {
+                    let flightlog_arc_c = flightlog_arc.clone();
+                    log::info!("Launching the OGN thread of {}", &oaci);
+                    loop {
+                        let res = synchronisation_ogn(flightlog_arc_c.clone(), &oaci);
+
+                        tokio::time::sleep(tokio::time::Duration::from_secs(
+                            f_synchronisation_secs_clone,
+                        ))
+                        .await; //5 minutes
+                        res.await.unwrap();
+                    }
+                });
             }
-        });
+        }
         let server = Server::bind(&address)
             .serve(service)
             .with_graceful_shutdown(signal_extinction());

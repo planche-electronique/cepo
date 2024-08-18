@@ -62,6 +62,19 @@ impl Default for AirportConfiguration {
     }
 }
 
+impl AirportConfiguration {
+    /// Returns the oaci code of the airport
+    pub fn oaci(&self) -> String {
+        return self.oaci.clone();
+    }
+
+    /// Returns the daymonitor field, i.e. wether the airport is logged all the
+    /// time or on specific dates.s
+    pub fn day_monitor(&self) -> DayMonitor {
+        return self.day_monitor.clone();
+    }
+}
+
 /// Allows to store and share configuration of the server. Loaded thanks to
 /// [confy](https://crates.io/crates/confy). Default value is written if there
 /// is no config file.

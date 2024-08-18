@@ -1,9 +1,11 @@
 //! Pour gérer les requêtes à OGN.
 
-use crate::flight::Update;
 use crate::flightlog::Storage;
-use crate::{Aircraft, Context};
+use std::sync::{Arc, Mutex};
+
+use crate::Aircraft;
 use brick_ogn::flight::Flight;
+use brick_ogn::flightlog::FlightLog;
 use chrono::prelude::*;
 use json::JsonValue;
 use log;
@@ -151,21 +153,14 @@ pub async fn ogn_flights(
 
 /// Synchronizes the server requesting OGN latest data.
 pub async fn synchronisation_ogn(
-    context: &Context,
+    flightlog_arc: Arc<Mutex<FlightLog>>,
+    oaci: &String,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let date = chrono::Local::now().date_naive();
-    for (oaci, flightlog_arc) in &context.flightlogs {
-        let flights_ogn = ogn_flights(date, oaci.clone()).await?;
-        let flightlog_lock = flightlog_arc.lock().unwrap();
-        let mut old_flightlog = (*flightlog_lock).clone();
-        drop(flightlog_lock);
-        // testing equality and replacing if needed
-        old_flightlog.flights.update(flights_ogn);
+    //let date = chrono::Local::now().date_naive();
 
-        let mut flightlog_lock = flightlog_arc.lock().unwrap();
-        *flightlog_lock = old_flightlog.clone();
-        drop(flightlog_lock);
-        let _ = old_flightlog.save(&oaci);
-    }
+    let mut flightlog_lock = flightlog_arc.lock().unwrap();
+    let _ = flightlog_lock.update_ogn(&oaci);
+    drop(flightlog_lock);
+    //let _ = old_flightlog.save(&oaci);
     return Ok(());
 }
