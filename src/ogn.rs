@@ -1,5 +1,6 @@
 //! Pour gérer les requêtes à OGN.
 
+use crate::configuration::AirportConfiguration;
 use crate::flightlog::Storage;
 use std::sync::{Arc, Mutex};
 
@@ -14,17 +15,18 @@ use std::fs;
 /// Retourne les vols récupérés par requête GET à OGN.
 pub async fn ogn_flights(
     date: NaiveDate,
-    airfield_oaci: String,
+    immatriculations: Vec<String>,
+    oaci: String,
 ) -> Result<Vec<Flight>, hyper::Error> {
     log::info!(
         "Requete à http://flightbook.glidernet.org/api/logbook/{}/{}",
-        airfield_oaci,
+        oaci,
         date.format("%Y-%m-%d").to_string()
     );
     let client = hyper::Client::new();
     let chemin = format!(
         "http://flightbook.glidernet.org/api/logbook/{}/{}",
-        airfield_oaci,
+        oaci,
         date.format("%Y-%m-%d")
     )
     .parse::<hyper::Uri>()
@@ -83,15 +85,6 @@ pub async fn ogn_flights(
         }
     };
 
-    let contenu_fichier = fs::read_to_string(crate::data_dir().as_path().join("infos.json"))
-        .unwrap_or_else(|_| "{}".to_string());
-    let fichier_parse = json::parse(contenu_fichier.as_str()).unwrap();
-    let immatriculations_json = &fichier_parse["immatriculations"];
-    let iter_fichier = immatriculations_json.members();
-    let mut immatriculations = Vec::new();
-    for valeur_json in iter_fichier {
-        immatriculations.push(valeur_json.as_str().unwrap().to_string());
-    }
     for (mut index, vol_json) in vols_json.clone().into_iter().enumerate() {
         index += 1;
 
