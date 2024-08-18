@@ -199,6 +199,17 @@ impl Configuration {
         }
         return hm;
     }
+
+    /// Returns a vector of the global immatriculations and the ones for the airport
+    pub fn immatriculation_ap(&mut self, oaci: &String) -> Vec<String> {
+        let mut immatriculations = self.immatriculations.clone();
+        for ap in &mut self.airfileds_configs {
+            if ap.oaci == *oaci {
+                immatriculations.append(&mut ap.immatriculations);
+            }
+        }
+        return immatriculations;
+    }
 }
 
 /// Copies an example configuration file instead of the actual config
