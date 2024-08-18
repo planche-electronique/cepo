@@ -24,10 +24,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     });
     if configuration == Configuration::default() {
         if std::io::stdout().is_terminal() {
-            let answer =
-                inquire::Confirm::new("Do you want to write and use example configuration file ?")
-                    .with_default(true)
-                    .prompt();
+            let answer = inquire::Confirm::new(
+                "Currently the default configuration file \
+                    is loaded and is not suitable to run the server. \nDo you \
+                    want to write and use example configuration file ?",
+            )
+            .with_default(true)
+            .with_help_message(
+                "Yes: will copy the example configuration file to \
+                the default path. No: the server will be stopped.",
+            )
+            .prompt();
             match answer {
                 Ok(true) => {
                     log::info!("Writing example configuration file");
@@ -35,11 +42,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                     copy_example_configuration_file().unwrap();
                     configuration = Configuration::example();
                 }
+                Ok(false) => {
+                    log::info!(
+                        "Default configuration is not suitable for running, stopping the server."
+                    );
+                    return Ok(());
+                }
                 Err(_) => {
                     log::error!("Error with questionnaire, try again later");
                     panic!();
                 }
-                _ => (),
             }
         } else {
             panic!(); //should return a more sexy error
