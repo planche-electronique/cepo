@@ -218,7 +218,7 @@ impl Configuration {
     /// Returns a vector of the global immatriculations and the ones for the airport
     pub fn immatriculation_ap(&mut self, oaci: &String) -> Vec<String> {
         let mut immatriculations = self.immatriculations.clone();
-        immatriculations.append(self.airport_configuration(oaci).unwrap().immatriculations());
+        immatriculations.append(&mut self.airport_configuration(oaci).unwrap().immatriculations());
         return immatriculations;
     }
 }
