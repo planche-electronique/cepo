@@ -221,6 +221,23 @@ impl Configuration {
         immatriculations.append(&mut self.airport_configuration(oaci).unwrap().immatriculations());
         return immatriculations;
     }
+
+    /// Returns the infos for an airport
+    /// Returns a tuple where the first ocnfig is the airport and the second is global
+    pub fn infos(&self, oaci: &String) -> (AirportConfiguration, AirportConfiguration) {
+        let global_config = AirportConfiguration {
+            oaci: String::from(""),
+            aerotows: self.permanent_aerotows,
+            winches: self.permanent_winches,
+            day_monitor: DayMonitor::Always,
+            immatriculations: self.immatriculations,
+            pilots: self.permanent_pilots,
+            tow_pilots: self.permanent_tow_pilots,
+            winch_pilots: self.permanent_winch_pilots,
+        };
+        let ap_config = self.airport_configuration(oaci).unwrap();
+        return (ap_config, global_config);
+    }
 }
 
 /// Copies an example configuration file instead of the actual config
