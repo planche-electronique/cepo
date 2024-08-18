@@ -89,7 +89,7 @@ impl AirportConfiguration {
 #[derive(serde::Serialize, serde::Deserialize, Clone, PartialEq)]
 pub struct Configuration {
     /// configuration of all airports to look at
-    pub airfileds_configs: Vec<AirportConfiguration>,
+    pub airports_configs: Vec<AirportConfiguration>,
     /// Time between each OGN poll.
     pub f_synchronisation_secs: i32,
     /// The port on which the server will listen to requests (default to 7878).
@@ -114,7 +114,7 @@ pub struct Configuration {
 impl Default for Configuration {
     fn default() -> Self {
         Self {
-            airfileds_configs: vec![AirportConfiguration::default()],
+            airports_configs: vec![AirportConfiguration::default()],
             f_synchronisation_secs: 300,
             port: 7878,
             log_level: "error".to_string(),
@@ -132,7 +132,7 @@ impl Configuration {
     /// Example configuration file
     pub fn example() -> Self {
         Self {
-            airfileds_configs: vec![
+            airports_configs: vec![
                 AirportConfiguration {
                     oaci: String::from("LFLE"),
                     pilots: vec![String::from("Walt Disney"), String::from("Roy Disney")],
@@ -190,7 +190,7 @@ impl Configuration {
     /// Returns a HashMap containing flightlogs associated with their oaci code in String
     pub async fn create_needed_flightlog_hashmap(&self) -> HashMap<String, Arc<Mutex<FlightLog>>> {
         let mut hm = HashMap::new();
-        for airport_config in &self.airfileds_configs {
+        for airport_config in &self.airports_configs {
             let date_today = chrono::Local::now().date_naive();
             let flightlog = FlightLog::load(date_today, &airport_config.oaci)
                 .await
@@ -207,7 +207,7 @@ impl Configuration {
 
     /// Returns the configuration for an airport
     pub fn airport_configuration(&self, oaci: &String) -> Result<AirportConfiguration, String> {
-        for ap in &self.airfileds_configs {
+        for ap in &self.airports_configs {
             if ap.oaci == *oaci {
                 return Ok(ap.clone());
             }

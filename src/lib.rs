@@ -146,7 +146,7 @@ impl Context {
             .f_synchronisation_secs
             .clone() as u64;
         // Spawning the regularly requesting OGN thread
-        for ap in &self.configuration.airfileds_configs {
+        for ap in &self.configuration.airports_configs {
             if ap.day_monitor() == DayMonitor::Always {
                 let oaci = ap.oaci();
                 let flightlog_arc = self.flightlogs[&oaci].clone();
