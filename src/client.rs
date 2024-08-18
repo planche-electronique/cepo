@@ -26,7 +26,6 @@ pub struct Client {
 }
 
 impl UsageControl for Vec<Client> {
-    /// Increases the counter of usage of the server of ip: address
     fn increase_usage(&mut self, address: &IpAddr) -> bool {
         let mut i = 0;
         while i < self.len() && self[i].address != *address {
@@ -53,7 +52,6 @@ impl UsageControl for Vec<Client> {
         }
     }
 
-    /// Decreases the counter of usage of the server of ip: address
     fn decrease_usage(&mut self, address: &IpAddr) {
         let mut i = 0;
         while i < self.len() && self[i].address != *address {
@@ -72,7 +70,6 @@ impl UsageControl for Vec<Client> {
 }
 
 impl UsageControl for Arc<Mutex<Vec<Client>>> {
-    /// Increases the counter of usage of the server of ip: address
     fn increase_usage(&mut self, address: &IpAddr) -> bool {
         let mut current_requests_lock = self.lock().unwrap();
         let res = (*current_requests_lock).increase_usage(address);
@@ -80,7 +77,6 @@ impl UsageControl for Arc<Mutex<Vec<Client>>> {
         res
     }
 
-    /// Increases the counter of usage of the server of ip: address
     fn decrease_usage(&mut self, address: &IpAddr) {
         let mut current_requests_lock = self.lock().unwrap();
         (*current_requests_lock).decrease_usage(address);
