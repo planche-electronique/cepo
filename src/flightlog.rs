@@ -51,13 +51,12 @@ impl Storage for FlightLog {
         });
         match flightlog.update_ogn(oaci).await {
             Ok(_) => {
-                let _ = flightlog.save(oaci);
+                let _ = flightlog.save(oaci).await;
             }
             Err(err) => {
                 log::error!("Could not connect to OGN ! : {err}");
             }
         }
-        let _ = flightlog.save(oaci);
         Ok(flightlog)
     }
 
@@ -163,6 +162,6 @@ impl Storage for FlightLog {
             .await
             .unwrap();
 
-        log::info!("Saved FlightLog of the {year}/{month_str}/{day_str}.");
+        log::info!("Saved FlightLog of the {year}-{month_str}-{day_str}.");
     }
 }
