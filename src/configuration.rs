@@ -102,6 +102,8 @@ pub struct Configuration {
     pub permanent_winches: Vec<String>,
     /// A vector of aerotows that you want to be in any flightlog.
     pub permanent_aerotows: Vec<String>,
+    /// The immatriculations  we always log regardless of the airport
+    pub immatriculations: Vec<String>,
 }
 
 impl Default for Configuration {
@@ -116,6 +118,7 @@ impl Default for Configuration {
             permanent_aerotows: Vec::new(),
             permanent_tow_pilots: Vec::new(),
             permanent_winch_pilots: Vec::new(),
+            immatriculations: Vec::new(),
         }
     }
 }
