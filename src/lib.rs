@@ -182,6 +182,12 @@ struct GetFlightLogsQueryParameters {
     oaci: String,
 }
 
+/// Handles the parameters for an airports's infos GET request
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+struct GetInfosQueryParameters {
+    oaci: String,
+}
+
 /// Handles the parameters for a updates post request
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 struct PostUpdateQueryParameters {
@@ -271,16 +277,20 @@ async fn connection_handler(
                 drop(updates_lock);
                 *response.body_mut() = Body::from(serde_json::to_string(&majs).unwrap_or_default());
             }
-            (&Method::GET, "/infos.json") => {
+            (&Method::GET, "/infos") => {
                 add_get_headers(&mut response);
-                let path = data_dir()
-                    .as_path()
-                    .join(std::path::Path::new("infos.json"));
-                *response.body_mut() = Body::from(fs::read_to_string(path).unwrap_or_else(|err| {
-                    log::warn!("Could not load infos.json : {}", err);
-                    *response.status_mut() = hyper::StatusCode::NOT_FOUND;
-                    "{}".to_string()
-                }));
+                let query = parts.uri.query().unwrap();
+                let query_parameters: GetInfosQueryParameters = serde_qs::from_str(query)
+                    .unwrap_or_else(|err| {
+                        log::error!("Error while deserializing query objects: {err}");
+                        context
+                            .current_requests
+                            .clone()
+                            .decrease_usage(&remote_addr);
+                        panic!();
+                    });
+                let infos = context.configuration.infos(&query_parameters.oaci);
+                *response.body_mut() = Body::from(serde_json::to_string(&infos).unwrap());
             }
             (&Method::POST, "/updates") => {
                 let query = parts.uri.query().unwrap();
