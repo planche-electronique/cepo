@@ -79,7 +79,7 @@ pub fn create_fs_path_day(annee: i32, mois: u32, jour: u32) {
     if !path.as_path().exists() {
         dbg!(&path);
         fs::create_dir_all(&path).unwrap();
-        log::info!("Création du chemin {}/{}/{}", annee, &mois_str, &jour_str);
+        log::info!("Creating path {}/{}/{}", annee, &mois_str, &jour_str);
     }
 }
 
