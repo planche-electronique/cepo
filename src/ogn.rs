@@ -1,7 +1,7 @@
 //! Pour gérer les requêtes à OGN.
 
-use crate::configuration::AirportConfiguration;
 use crate::flightlog::Storage;
+use crate::Context;
 use std::sync::{Arc, Mutex};
 
 use crate::Aircraft;
@@ -10,7 +10,6 @@ use brick_ogn::flightlog::FlightLog;
 use chrono::prelude::*;
 use json::JsonValue;
 use log;
-use std::fs;
 
 /// Retourne les vols récupérés par requête GET à OGN.
 pub async fn ogn_flights(
@@ -148,11 +147,12 @@ pub async fn ogn_flights(
 pub async fn synchronisation_ogn(
     flightlog_arc: Arc<Mutex<FlightLog>>,
     oaci: &String,
+    context: &Context,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     //let date = chrono::Local::now().date_naive();
 
     let mut flightlog_lock = flightlog_arc.lock().unwrap();
-    let _ = flightlog_lock.update_ogn(&oaci);
+    let _ = flightlog_lock.update_ogn(&oaci, context);
     drop(flightlog_lock);
     //let _ = old_flightlog.save(&oaci);
     return Ok(());
