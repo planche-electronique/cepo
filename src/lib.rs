@@ -105,7 +105,7 @@ impl Context {
     pub async fn new(configuration: Configuration) -> Self {
         let current_requests: Arc<Mutex<Vec<Client>>> = Arc::new(Mutex::new(Vec::new()));
         //let ecouteur = TcpListener::bind("127.0.0.1:7878").unwrap();
-        // creation du dossier de travail si besoin
+        // Creation of the working dir if needed
         if !(crate::data_dir().as_path().exists()) {
             fs::create_dir_all(data_dir().as_path())
                 .expect("Could not create data_dir on your platform.");
@@ -145,7 +145,7 @@ impl Context {
             .clone()
             .f_synchronisation_secs
             .clone() as u64;
-        //on spawn le thread qui va s'occuper de ogn
+        // Spawning the regularly requesting OGN thread
         for ap in &self.configuration.airfileds_configs {
             if ap.day_monitor() == DayMonitor::Always {
                 let oaci = ap.oaci();
@@ -171,7 +171,6 @@ impl Context {
             .with_graceful_shutdown(signal_extinction());
         log::info!("Server started.");
         server.await?;
-        //drop(context);
         Ok(())
     }
 }
@@ -237,7 +236,6 @@ async fn connection_handler(
                         panic!();
                     });
                 if query_parameters.date == today {
-                    //on recupere la liste de planche
                     let flightlog_lock = context.flightlogs[&query_parameters.oaci].lock().unwrap();
                     let clone_planche = (*flightlog_lock).clone();
                     drop(flightlog_lock);
@@ -288,9 +286,7 @@ async fn connection_handler(
                 let query = parts.uri.query().unwrap();
                 let query_parameters: PostUpdateQueryParameters =
                     serde_qs::from_str(query).unwrap();
-                // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
-                let mut clean_json = String::new(); //necessite de creer une string qui va contenir
-                                                    //seulement les caracteres valies puisque le parser retourne des UTF0000 qui sont invalides pour le parser json
+                let mut clean_json = String::new();
                 for char in std::str::from_utf8(&corps_str.await?)
                     .unwrap()
                     .to_string()
@@ -303,7 +299,6 @@ async fn connection_handler(
 
                 let update: Update = serde_json::from_str(&clean_json).unwrap_or_default();
                 {
-                    // On ajoute la mise a jour au vecteur de mises a jour
                     let mut updates_lock = context.updates.lock().unwrap();
                     (*updates_lock).push(update.clone());
                 }
@@ -328,7 +323,6 @@ async fn connection_handler(
                     .insert(ACCESS_CONTROL_ALLOW_ORIGIN, "*".parse().unwrap());
             }
             (&Method::OPTIONS, "/majs") => {
-                // les trois champs d'une telle requete sont séparés par des virgules tels que: "4,decollage,12:24,"
                 *response.status_mut() = StatusCode::NO_CONTENT;
                 response
                     .headers_mut()
@@ -393,7 +387,7 @@ async fn connection_handler(
 
 /// The handler for the end of the program
 async fn signal_extinction() {
-    // Attendre pour le signal CTRL+C
+    // Waiting for the CTRL-C signal
     tokio::signal::ctrl_c()
         .await
         .expect("Failed to install signal handler for Ctrl-C");
