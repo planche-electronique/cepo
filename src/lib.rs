@@ -150,11 +150,12 @@ impl Context {
             if ap.day_monitor() == DayMonitor::Always {
                 let oaci = ap.oaci();
                 let flightlog_arc = self.flightlogs[&oaci].clone();
+                let context_c = context_svc.clone();
                 tokio::spawn(async move {
                     let flightlog_arc_c = flightlog_arc.clone();
                     log::info!("Launching the OGN thread of {}", &oaci);
                     loop {
-                        let res = synchronisation_ogn(flightlog_arc_c.clone(), &oaci);
+                        let res = synchronisation_ogn(flightlog_arc_c.clone(), &oaci, &context_c);
 
                         tokio::time::sleep(tokio::time::Duration::from_secs(
                             f_synchronisation_secs_clone,
