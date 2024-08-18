@@ -1,7 +1,10 @@
 //! Storage and associated methods of a Client: a machine that is using the service.
 
 use log;
-use std::{net::IpAddr, sync::{Arc, Mutex}};
+use std::{
+    net::IpAddr,
+    sync::{Arc, Mutex},
+};
 
 /// Trait that allows to change the number of active requests a [`Client`] is havingClient`].
 pub trait UsageControl {
@@ -33,15 +36,12 @@ impl UsageControl for Vec<Client> {
                 adresse: *adresse,
                 requetes_en_cours: 1,
             });
-            log::info!("Adding address : {} to the connection log.", adresse);
+            log::info!("Incoming connection from {}.", adresse);
             true
         } else if self[i].adresse == *adresse {
             if self[i].requetes_en_cours < 10 {
                 self[i].requetes_en_cours += 1;
-                log::info!(
-                    "Handling request {}; add to register.",
-                    &adresse
-                );
+                log::info!("Handling request {}; add to register.", &adresse);
                 true
             } else {
                 log::warn!("No more request authorized for {}", adresse);
@@ -58,7 +58,6 @@ impl UsageControl for Vec<Client> {
             i += 1;
         }
         if i == self.len() {
-
         } else if self[i].adresse == *adresse {
             if self[i].requetes_en_cours != 1 {
                 self[i].requetes_en_cours -= 1;
