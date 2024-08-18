@@ -2,6 +2,7 @@
 //! on the ground at the moment.
 
 use crate::ogn::ogn_flights;
+use crate::Context;
 use crate::{create_fs_path_day, nb_2digits_string};
 use async_trait::async_trait;
 pub use brick_ogn::flightlog::update::Update;
@@ -21,6 +22,7 @@ pub trait Storage {
     async fn update_ogn(
         &mut self,
         oaci: &String,
+        context: &Context,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
     /// Loading FlightLog from the disk only, without updating.
     async fn load(
@@ -64,9 +66,15 @@ impl Storage for FlightLog {
     async fn update_ogn(
         &mut self,
         oaci: &String,
+        context: &Context,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // We test equalities and we replace if needed.
-        let last_flights_fut = ogn_flights(self.date, oaci.to_string());
+        let immatriculations = context
+            .configuration
+            .airport_configuration(oaci)
+            .unwrap()
+            .immatriculations();
+        let last_flights_fut = ogn_flights(self.date, immatriculations, (*oaci).clone());
         let mut index_next_flight = 0;
         let mut priority_next_flight = 0;
         let old_flightlog = self;
