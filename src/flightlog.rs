@@ -17,6 +17,7 @@ pub trait Storage {
     async fn from_day(
         date: NaiveDate,
         oaci: &String,
+        context: &Context,
     ) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>>;
     /// Updating the flightlog from ogn using today's date.
     async fn update_ogn(
@@ -39,6 +40,7 @@ impl Storage for FlightLog {
     async fn from_day(
         date: NaiveDate,
         oaci: &String,
+        context: &Context,
     ) -> Result<FlightLog, Box<dyn std::error::Error + Send + Sync>> {
         let year: i32 = date.year();
         let month = date.month();
@@ -51,7 +53,7 @@ impl Storage for FlightLog {
             fl.date = date;
             fl
         });
-        match flightlog.update_ogn(oaci).await {
+        match flightlog.update_ogn(oaci, context).await {
             Ok(_) => {
                 let _ = flightlog.save(oaci).await;
             }
