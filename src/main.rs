@@ -10,7 +10,7 @@ use std::io::IsTerminal;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    //initialisation des outils cli (confy, log, panic)
+    // initializing cli tools (confy, log, panic)
     #[cfg(not(debug_assertions))]
     setup_panic!();
 
@@ -45,7 +45,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             panic!(); //should return a more sexy error
         }
     }
-    //confy::store("cepo", None, configuration.clone())?;
     env_logger::Builder::from_env(
         env_logger::Env::default().default_filter_or(&configuration.log_level),
     )

@@ -1,4 +1,4 @@
-//! Pour gérer les requêtes à OGN.
+//! To request ogn
 
 use crate::flightlog::Storage;
 use crate::Context;
@@ -11,7 +11,7 @@ use chrono::prelude::*;
 use json::JsonValue;
 use log;
 
-/// Retourne les vols récupérés par requête GET à OGN.
+/// Returns Flights that we requested to OGN and these are sorted
 pub async fn ogn_flights(
     date: NaiveDate,
     immatriculations: Vec<String>,
@@ -37,9 +37,8 @@ pub async fn ogn_flights(
     let requete_parse = json::parse(corps_str.as_str()).unwrap();
     log::info!("Traitement de la requete.");
 
-    /* ogn repere les aéronefs d'un jour en les listants et leur attribuant un id,
-    nous devons donc faire un lien entre l'immatriculation et le numero
-    d'un aeronef */
+    /* making link between number and immatriculations because ogn identifies
+    aircrafts with numbers */
     let devices = requete_parse["devices"].clone();
     let mut appareils_ogn: Vec<Aircraft> = Vec::new();
     let tableau_devices = match devices {
@@ -71,8 +70,7 @@ pub async fn ogn_flights(
         appareils_ogn.push(appareil_actuel);
     }
 
-    /* ic on s'occupe de lister les vols et d'attribuer les
-    immatriculations etc a chaque vol */
+    /* listing flights to give them immatriculations */
 
     let mut vols: Vec<Flight> = Vec::new();
     let flights = requete_parse["flights"].clone();
@@ -87,7 +85,7 @@ pub async fn ogn_flights(
     for (mut index, vol_json) in vols_json.clone().into_iter().enumerate() {
         index += 1;
 
-        // on recupere tous les champs nécessaires
+        // getting necessary fields
         let device = vol_json["device"].clone();
         let device_number = device.as_u8().unwrap() as usize;
         let immatriculation = appareils_ogn[device_number].immatriculation.clone();
@@ -95,24 +93,24 @@ pub async fn ogn_flights(
             .iter()
             .any(|immat| *immat == immatriculation.clone()))
         {
-            //si l'immat n'est pas dans la liste, on ne la prend pas en compte
+            //Don't take immatriculation into account if not in list
             continue;
         }
-        //decollage
+        // Takeoff
         let mut start_json = vol_json["start"].clone();
         let start_str = start_json
             .take_string()
             .unwrap_or_else(|| "00h00".to_string())
             .clone();
         let takeoff = NaiveTime::parse_from_str(&start_str, "%Hh%M").unwrap();
-        //atterissage
+        // Landing
         let stop_json = vol_json["stop"].clone();
         let stop_str = match stop_json {
             json::JsonValue::Short(short) => short.as_str().to_string(),
             _ => "00h00".to_string(),
         };
         let landing = NaiveTime::parse_from_str(stop_str.as_str(), "%Hh%M").unwrap();
-        //code_decollage
+        // TakeoffCode
         let mut takeoff_machine = "".to_string();
         let takeoff_code = if vol_json["tow"] == JsonValue::Null {
             "T"
@@ -149,11 +147,8 @@ pub async fn synchronisation_ogn(
     oaci: &String,
     context: &Context,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    //let date = chrono::Local::now().date_naive();
-
     let mut flightlog_lock = flightlog_arc.lock().unwrap();
     let _ = flightlog_lock.update_ogn(&oaci, context);
     drop(flightlog_lock);
-    //let _ = old_flightlog.save(&oaci);
     return Ok(());
 }

@@ -10,6 +10,7 @@ use brick_ogn::flightlog::FlightLog;
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use log;
 use tokio::fs;
+
 /// A trait that cares about the storage of a FlightLog on a computer.
 #[async_trait]
 pub trait Storage {
