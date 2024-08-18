@@ -205,6 +205,36 @@ impl Configuration {
         return hm;
     }
 
+    /// Returns permanent pilots field
+    pub fn permanent_pilots(&self) -> Vec<String> {
+        return self.permanent_pilots.clone();
+    }
+
+    /// Returns permanent winch_pilots field
+    pub fn permanent_winch_pilots(&self) -> Vec<String> {
+        return self.permanent_winch_pilots.clone();
+    }
+
+    /// Returns permanent tow_pilots field
+    pub fn permanent_tow_pilots(&self) -> Vec<String> {
+        return self.permanent_tow_pilots.clone();
+    }
+
+    /// Returns permanent winches field
+    pub fn permanent_winches(&self) -> Vec<String> {
+        return self.permanent_winches.clone();
+    }
+
+    /// Returns permanent aerotows field
+    pub fn permanent_aerotows(&self) -> Vec<String> {
+        return self.permanent_aerotows.clone();
+    }
+
+    /// Returns permanent immatriculations field
+    pub fn permanent_immatriculations(&self) -> Vec<String> {
+        return self.permanent_immatriculations.clone();
+    }
+
     /// Returns the configuration for an airport
     pub fn airport_configuration(&self, oaci: &String) -> Result<AirportConfiguration, String> {
         for ap in &self.airports_configs {
@@ -227,13 +257,13 @@ impl Configuration {
     pub fn infos(&self, oaci: &String) -> (AirportConfiguration, AirportConfiguration) {
         let global_config = AirportConfiguration {
             oaci: String::from(""),
-            aerotows: self.permanent_aerotows,
-            winches: self.permanent_winches,
+            aerotows: self.permanent_aerotows(),
+            winches: self.permanent_winches(),
             day_monitor: DayMonitor::Always,
-            immatriculations: self.permanent_immatriculations,
-            pilots: self.permanent_pilots,
-            tow_pilots: self.permanent_tow_pilots,
-            winch_pilots: self.permanent_winch_pilots,
+            immatriculations: self.permanent_immatriculations(),
+            pilots: self.permanent_pilots(),
+            tow_pilots: self.permanent_tow_pilots(),
+            winch_pilots: self.permanent_winch_pilots(),
         };
         let ap_config = self.airport_configuration(oaci).unwrap();
         return (ap_config, global_config);
