@@ -136,6 +136,12 @@ impl Configuration {
                     winches: vec![String::from("yellow"), String::from("green")],
                     aerotows: vec![String::from("red"), String::from("blue")],
                     day_monitor: DayMonitor::Always,
+                    immatriculations: vec![
+                        String::from("F-CEJU"),
+                        String::from("F-CECY"),
+                        String::from("F-CBAR"),
+                        String::from("F-CHFL"),
+                    ],
                 },
                 AirportConfiguration {
                     oaci: String::from("LFLB"),
@@ -150,6 +156,14 @@ impl Configuration {
                     day_monitor: DayMonitor::Days(vec![
                         NaiveDate::from_ymd_opt(2024, 6, 10).unwrap()
                     ]),
+                    immatriculations: vec![
+                        String::from("F-CEJU"),
+                        String::from("F-CDYA"),
+                        String::from("F-CHBY"),
+                        String::from("F-CLIN"),
+                        String::from("F-CGCZ"),
+                        String::from("F-CHFM"),
+                    ],
                 },
             ],
             f_synchronisation_secs: 300,
@@ -160,6 +174,11 @@ impl Configuration {
             permanent_tow_pilots: vec![String::from("Steve Jobs"), String::from("Jony Ive")],
             permanent_aerotows: vec![String::from("cyan"), String::from("clear green")],
             permanent_winch_pilots: vec![String::from("Steve Jobs"), String::from("Jony Ive")],
+            immatriculations: vec![
+                String::from("F-CVIP"),
+                String::from("F-CNON"),
+                String::from("F-CLMT"),
+            ],
         }
     }
 
