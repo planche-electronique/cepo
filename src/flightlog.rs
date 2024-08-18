@@ -125,7 +125,7 @@ impl Storage for FlightLog {
         let month = date.month();
         let day = date.day();
         log::info!(
-            "Loading FlightLog at {} from the disk {}/{}/{}",
+            "Loading FlightLog at {} from the disk {}-{}-{}",
             oaci,
             year,
             month,
