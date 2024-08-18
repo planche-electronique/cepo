@@ -200,6 +200,16 @@ impl Configuration {
         return hm;
     }
 
+    /// Returns the configuration for an airport
+    pub fn airport_configuration(&self, oaci: &String) -> Result<AirportConfiguration, String> {
+        for ap in &self.airfileds_configs {
+            if ap.oaci == *oaci {
+                return Ok(ap.clone());
+            }
+        }
+        return Err(String::from("Couldn't find a corresponding airport"));
+    }
+
     /// Returns a vector of the global immatriculations and the ones for the airport
     pub fn immatriculation_ap(&mut self, oaci: &String) -> Vec<String> {
         let mut immatriculations = self.immatriculations.clone();
