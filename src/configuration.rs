@@ -46,6 +46,8 @@ pub struct AirportConfiguration {
     aerotows: Vec<String>,
     /// The conditions about when to monitor this airport:
     day_monitor: DayMonitor,
+    /// The immatriculations of the aircraft that we will log
+    immatriculations: Vec<String>,
 }
 
 impl Default for AirportConfiguration {
@@ -58,6 +60,7 @@ impl Default for AirportConfiguration {
             aerotows: Vec::new(),
             tow_pilots: Vec::new(),
             day_monitor: DayMonitor::default(),
+            immatriculations: Vec::new(),
         }
     }
 }
