@@ -1,5 +1,5 @@
 # Serveur interface
-
+[![](https://tokei.rs/b1/github/XAMPPRocky/tokei)](https://github.com/XAMPPRocky/tokei).
 ## Introduction
 
 Ce petit serveur web fait l'interface entre le site web et le javascript de la
